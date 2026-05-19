@@ -40,10 +40,9 @@ const Game = {
 	elements: {
 		canvas: document.getElementById('game-canvas'),
 		ui: document.getElementById('game-ui'),
-		score: document.getElementById('game-score'),
+		score: document.getElementById('top-score-value'),
 		end: document.getElementById('game-end-container'),
 		endTitle: document.getElementById('game-end-title'),
-		statusValue: document.getElementById('game-highscore-value'),
 		nextFruitImg: document.getElementById('game-next-fruit'),
 		previewBall: null,
 	},
@@ -77,6 +76,16 @@ const Game = {
 		Game.elements.score.innerText = Game.score;
 	},
 
+	// 图鉴：点亮已合成过的球（两个球合成后，点亮合成前的等级）
+	unlockCompendium: function (sizeIndex) {
+		const items = document.querySelectorAll('.compendium-item');
+		// compendium-row 里每隔一个是箭头，item 在奇数位(0-based): 0,2,4...
+		// sizeIndex 0→items[0], 1→items[1]...
+		if (items[sizeIndex]) {
+			items[sizeIndex].classList.add('unlocked');
+		}
+	},
+
 	fruitSizes: [
 		{ radius: 22,  scoreValue: 1,  img: './assets/img/circle0.png'  },
 		{ radius: 29,  scoreValue: 3,  img: './assets/img/circle1.png'  },
@@ -97,25 +106,17 @@ const Game = {
 		Game.elements.nextFruitImg.src = `./assets/img/circle${Game.nextFruitSize}.png`;
 	},
 
-	showHighscore: function () {
-		Game.elements.statusValue.innerText = Game.cache.highscore;
-	},
 	loadHighscore: function () {
 		const gameCache = localStorage.getItem('suika-game-cache');
-		if (gameCache === null) {
-			Game.saveHighscore();
-			return;
+		if (gameCache !== null) {
+			Game.cache = JSON.parse(gameCache);
 		}
-
-		Game.cache = JSON.parse(gameCache);
-		Game.showHighscore();
 	},
 	saveHighscore: function () {
 		Game.calculateScore();
 		if (Game.score < Game.cache.highscore) return;
 
 		Game.cache.highscore = Game.score;
-		Game.showHighscore();
 		Game.elements.endTitle.innerText = 'New Highscore!';
 
 		localStorage.setItem('suika-game-cache', JSON.stringify(Game.cache));
@@ -155,6 +156,8 @@ const Game = {
 		Game.elements.end.style.display = 'none';
 		Game.elements.previewBall = Game.generateFruitBody(Game.width / 2, previewBallHeight, 0, { isStatic: true });
 		Composite.add(engine.world, Game.elements.previewBall);
+		// 游戏开始时点亮初始预览球（始终是 level 0）
+		Game.unlockCompendium(0);
 
 		setTimeout(() => {
 			Game.stateIndex = GameStates.READY;
@@ -214,6 +217,8 @@ const Game = {
 				Composite.add(engine.world, Game.generateFruitBody(midPosX, midPosY, newSize));
 				Game.addPop(midPosX, midPosY, bodyA.circleRadius);
 				Game.calculateScore();
+				Game.unlockCompendium(bodyA.sizeIndex); // 解锁参与合成的球
+				Game.unlockCompendium(newSize);          // 解锁合成产生的新球
 			}
 		});
 	},
@@ -275,6 +280,9 @@ const Game = {
 		Game.stateIndex = GameStates.DROP;
 		const latestFruit = Game.generateFruitBody(x, previewBallHeight, Game.currentFruitSize);
 		Composite.add(engine.world, latestFruit);
+
+		// 投放时点亮图鉴（首次出现即解锁）
+		Game.unlockCompendium(Game.currentFruitSize);
 
 		Game.currentFruitSize = Game.nextFruitSize;
 		Game.setNextFruitSize();
@@ -372,27 +380,31 @@ render.mouse = mouse;
 Game.initGame();
 
 const resizeCanvas = () => {
-	const screenWidth = document.body.clientWidth;
-	const screenHeight = document.body.clientHeight;
+	// 可用区域：#game-canvas-wrap 的实际尺寸
+	const wrap = document.getElementById('game-canvas-wrap');
+	const availW = wrap.clientWidth;
+	const availH = wrap.clientHeight;
 
-	let newWidth = Game.width;
-	let newHeight = Game.height;
-	let scaleUI = 1;
+	// 按游戏宽高比 640:700 在可用区内最大化填充
+	const gameRatio = Game.width / Game.height; // 640/700
+	let canvasW, canvasH;
 
-	if (screenWidth * (700 / 640) > screenHeight) {
-		newHeight = Math.min(Game.height, screenHeight);
-		newWidth = newHeight * (640 / 700);
-		scaleUI = newHeight / Game.height;
+	if (availW / availH > gameRatio) {
+		// 高度是瓶颈
+		canvasH = availH;
+		canvasW = canvasH * gameRatio;
 	} else {
-		newWidth = Math.min(Game.width, screenWidth);
-		newHeight = newWidth * (700 / 640);
-		scaleUI = newWidth / Game.width;
+		// 宽度是瓶颈
+		canvasW = availW;
+		canvasH = canvasW / gameRatio;
 	}
 
-	render.canvas.style.width = `${newWidth}px`;
-	render.canvas.style.height = `${newHeight}px`;
+	const scaleUI = canvasW / Game.width;
 
-	Game.elements.ui.style.width = `${Game.width}px`;
+	render.canvas.style.width  = `${canvasW}px`;
+	render.canvas.style.height = `${canvasH}px`;
+
+	Game.elements.ui.style.width  = `${Game.width}px`;
 	Game.elements.ui.style.height = `${Game.height}px`;
 	Game.elements.ui.style.transform = `scale(${scaleUI})`;
 };
