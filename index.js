@@ -112,64 +112,58 @@ function spawnScoreText(x, y, points, isCombo = false) {
   });
 }
 
-// ── 大合成特效（合成倒数第3、2、1级时触发）──────────────────
+// ── 大合成特效（合成出 circle8/9/10 时触发）──────────────────
 const BIG_MERGE_LEVELS = {
-  // sizeIndex（合成前的级别） → 配置
-  8: { label: 'GREAT！',       color: '#ff9900', shadow: '#ff5500' },
-  9: { label: 'AWESOME！',     color: '#ff44cc', shadow: '#aa00aa' },
- 10: { label: 'UNBELIEVABLE！',color: '#00ddff', shadow: '#0044ff' },
+  // newSize（合成后产生的球等级） → 配置
+  8:  { label: 'GOOD！',    color: '#ff9900', shadow: '#ff5500' },
+  9:  { label: 'GREAT！',   color: '#ff44cc', shadow: '#aa00aa' },
+  10: { label: 'AMAZING！', color: '#00ddff', shadow: '#0044ff' },
 };
 let bigMergeTimer = null;
-const bigMergeOverlay = document.getElementById('big-merge-overlay');
-const bigMergeFruit   = document.getElementById('big-merge-fruit');
-const bigMergeTextEl  = document.getElementById('big-merge-text');
 
 function triggerBigMerge(sizeIndex, fruitImg) {
   const cfg = BIG_MERGE_LEVELS[sizeIndex];
   if (!cfg) return;
 
-  if (bigMergeTimer) {
-    clearTimeout(bigMergeTimer);
-    bigMergeTimer = null;
-  }
+  if (bigMergeTimer) { clearTimeout(bigMergeTimer); bigMergeTimer = null; }
 
-  // 用 cloneNode 替换元素来强制重置动画（比 reflow 更可靠）
-  function resetAnim(el) {
-    const clone = el.cloneNode(true);
-    el.parentNode.replaceChild(clone, el);
-    return clone;
-  }
+  // 每次实时获取 DOM，避免引用失效
+  const overlay = document.getElementById('big-merge-overlay');
+  const fruit   = document.getElementById('big-merge-fruit');
+  const textEl  = document.getElementById('big-merge-text');
 
-  const overlay = resetAnim(bigMergeOverlay);
-  // 替换后重新获取子元素
-  const fruit   = overlay.querySelector('#big-merge-fruit');
-  const textEl  = overlay.querySelector('#big-merge-text');
+  // 1. 移除 show class + 强制清除内联 animation
+  [overlay, fruit, textEl].forEach(el => {
+    el.classList.remove('show');
+    el.style.animation = 'none';
+  });
 
-  // 更新全局引用
-  bigMergeOverlay.id && (window._bmoOverlay = overlay);
+  // 2. 一次 reflow 让浏览器确认重置
+  void overlay.offsetWidth;
 
-  fruit.src          = fruitImg;
+  // 3. 设置内容
+  fruit.src        = fruitImg;
   textEl.textContent = cfg.label;
   textEl.style.color = cfg.color;
   textEl.style.textShadow =
     `0 0 20px ${cfg.shadow}, 0 0 40px ${cfg.color}, 3px 3px 0 rgba(0,0,0,0.3)`;
 
-  // 触发 show（requestAnimationFrame 确保浏览器已渲染初始状态）
-  requestAnimationFrame(() => {
-    overlay.classList.add('show');
-    fruit.classList.add('show');
-    textEl.classList.add('show');
+  // 4. 恢复 animation 并触发
+  [overlay, fruit, textEl].forEach(el => {
+    el.style.animation = '';
+    el.classList.add('show');
   });
 
-  // 大量粒子爆炸
+  // 粒子爆炸
   spawnParticles(Game.width / 2, Game.height / 2, 120, 60);
 
   bigMergeTimer = setTimeout(() => {
-    overlay.classList.remove('show');
-    fruit.classList.remove('show');
-    textEl.classList.remove('show');
+    const o = document.getElementById('big-merge-overlay');
+    const f = document.getElementById('big-merge-fruit');
+    const t = document.getElementById('big-merge-text');
+    [o, f, t].forEach(el => el.classList.remove('show'));
     bigMergeTimer = null;
-  }, 2100);
+  }, 3500);
 }
 
 // ── 连击系统 ────────────────────────────────────────────────
@@ -287,9 +281,9 @@ const Game = {
 		Game.elements.score.innerText = Game.score;
 	},
 
-	// 图鉴：点亮已合成过的球（两个球合成后，点亮合成前的等级）
+	// 图鉴：点亮已合成过的球（底部图鉴从 circle1 开始，索引需要 -1）
 	unlockCompendium: function (sizeIndex) {
-		const item = Game.elements.compendiumItems[sizeIndex];
+		const item = Game.elements.compendiumItems[sizeIndex - 1];
 		if (item) item.classList.add('unlocked');
 	},
 
@@ -306,10 +300,11 @@ const Game = {
 		{ radius: 142, scoreValue: 55, img: './assets/img/circle9.png'  },
 		{ radius: 168, scoreValue: 66, img: './assets/img/circle10.png' },
 	],
-	currentFruitSize: 0,
-	nextFruitSize: 0,
+	currentFruitSize: 1,
+	nextFruitSize: 1,
 	setNextFruitSize: function () {
-		Game.nextFruitSize = Math.floor(rand() * 5);
+		// 随机掉落 circle1~5
+		Game.nextFruitSize = 1 + Math.floor(rand() * 5);
 		Game.elements.nextFruitImg.src = `./assets/img/circle${Game.nextFruitSize}.png`;
 	},
 
@@ -363,10 +358,9 @@ const Game = {
 		Game.elements.endTitle.innerText = '游戏结束！';
 		Game.elements.ui.style.display = 'block';
 		Game.elements.end.style.display = 'none';
-		Game.elements.previewBall = Game.generateFruitBody(Game.width / 2, previewBallHeight, 0, { isStatic: true });
+		Game.elements.previewBall = Game.generateFruitBody(Game.width / 2, previewBallHeight, 1, { isStatic: true });
 		Composite.add(engine.world, Game.elements.previewBall);
-		// 游戏开始时点亮初始预览球（始终是 level 0）
-		Game.unlockCompendium(0);
+		Game.unlockCompendium(1);
 
 		setTimeout(() => {
 			Game.stateIndex = GameStates.READY;
@@ -415,7 +409,7 @@ const Game = {
 
 				let newSize = bodyA.sizeIndex + 1;
 				if (bodyA.circleRadius >= Game.fruitSizes[Game.fruitSizes.length - 1].radius) {
-					newSize = 0;
+					newSize = 1;
 				}
 
 				const midPosX = (bodyA.position.x + bodyB.position.x) / 2;
@@ -443,8 +437,8 @@ const Game = {
 				const mergePoints = Game.fruitSizes[bodyA.sizeIndex].scoreValue;
 				spawnScoreText(midPosX, midPosY, mergePoints);
 
-				// 大合成特效：合成倒数后3级时全屏爆发
-				triggerBigMerge(bodyA.sizeIndex, Game.fruitSizes[bodyA.sizeIndex].img);
+				// 大合成特效：合成出 circle8→GOOD，circle9→GREAT，circle10→AMAZING
+				triggerBigMerge(newSize, Game.fruitSizes[newSize].img);
 
 				Game.fruitsMerged[bodyA.sizeIndex] += 1;
 				Game.calculateScore();

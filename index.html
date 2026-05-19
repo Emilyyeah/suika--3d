@@ -148,12 +148,12 @@
       opacity: 0;
     }
     #big-merge-overlay.show {
-      animation: bmo-fade 2s ease forwards;
+      animation: bmo-fade 3.5s ease forwards;
     }
     @keyframes bmo-fade {
       0%   { opacity: 0; }
-      10%  { opacity: 1; }
-      70%  { opacity: 1; }
+      8%   { opacity: 1; }
+      75%  { opacity: 1; }
       100% { opacity: 0; }
     }
     #big-merge-overlay::before {
@@ -215,13 +215,13 @@
       opacity: 0;
     }
     #big-merge-fruit.show {
-      animation: bmo-fruit 2s ease forwards;
+      animation: bmo-fruit 3.5s ease forwards;
     }
     @keyframes bmo-fruit {
       0%   { transform: scale(0.3) rotate(-15deg); opacity: 0; }
-      15%  { transform: scale(1.25) rotate(5deg);  opacity: 1; }
-      30%  { transform: scale(1.0)  rotate(0deg);  opacity: 1; }
-      75%  { transform: scale(1.0)  rotate(0deg);  opacity: 1; }
+      10%  { transform: scale(1.25) rotate(5deg);  opacity: 1; }
+      20%  { transform: scale(1.0)  rotate(0deg);  opacity: 1; }
+      78%  { transform: scale(1.0)  rotate(0deg);  opacity: 1; }
       100% { transform: scale(1.15) rotate(3deg);  opacity: 0; }
     }
     #big-merge-text {
@@ -234,13 +234,13 @@
       opacity: 0;
     }
     #big-merge-text.show {
-      animation: bmo-text 2s ease forwards;
+      animation: bmo-text 3.5s ease forwards;
     }
     @keyframes bmo-text {
       0%   { transform: scale(0.5) translateY(30px);  opacity: 0; }
-      20%  { transform: scale(1.15) translateY(0);    opacity: 1; }
-      35%  { transform: scale(1.0)  translateY(0);    opacity: 1; }
-      75%  { transform: scale(1.0)  translateY(0);    opacity: 1; }
+      12%  { transform: scale(1.15) translateY(0);    opacity: 1; }
+      22%  { transform: scale(1.0)  translateY(0);    opacity: 1; }
+      78%  { transform: scale(1.0)  translateY(0);    opacity: 1; }
       100% { transform: scale(0.9) translateY(-20px); opacity: 0; }
     }
 
@@ -459,7 +459,7 @@
       <div id="panel-next">
         <div class="next-label">下一个</div>
         <div id="panel-next-fruit-wrap">
-          <img id="game-next-fruit" src="./assets/img/circle0.png" />
+          <img id="game-next-fruit" src="./assets/img/circle1.png" />
         </div>
       </div>
 
@@ -499,7 +499,6 @@
     <!-- 底部图鉴区 -->
     <div id="panel-bottom">
       <div id="compendium">
-        <div class="compendium-item"><img src="./assets/img/circle0.png" /></div>
         <div class="compendium-item"><img src="./assets/img/circle1.png" /></div>
         <div class="compendium-item"><img src="./assets/img/circle2.png" /></div>
         <div class="compendium-item"><img src="./assets/img/circle3.png" /></div>
