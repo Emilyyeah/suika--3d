@@ -125,6 +125,155 @@
       transform-origin: top left;
     }
 
+    /* ── 粒子 & 飞字 overlay canvas ── */
+    #fx-canvas {
+      position: absolute;
+      top: 0; left: 0;
+      pointer-events: none;
+      z-index: 20;
+      transform-origin: top left;
+    }
+
+    /* ── 大合成特效 overlay ── */
+    #big-merge-overlay {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 50;
+      opacity: 0;
+    }
+    #big-merge-overlay.show {
+      animation: bmo-fade 2s ease forwards;
+    }
+    @keyframes bmo-fade {
+      0%   { opacity: 0; }
+      10%  { opacity: 1; }
+      70%  { opacity: 1; }
+      100% { opacity: 0; }
+    }
+    #big-merge-overlay::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at center,
+        rgba(255,220,50,0.45) 0%,
+        rgba(255,120,0,0.2) 50%,
+        transparent 75%);
+      animation: bmo-pulse 0.4s ease infinite alternate;
+    }
+    @keyframes bmo-pulse {
+      from { transform: scale(1);    opacity: 0.8; }
+      to   { transform: scale(1.06); opacity: 1; }
+    }
+    #big-merge-rays {
+      position: absolute;
+      width: 500px;
+      height: 500px;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      background: conic-gradient(
+        from 0deg,
+        transparent 0deg,   rgba(255,220,80,0.35) 10deg,
+        transparent 20deg,  rgba(255,220,80,0.35) 30deg,
+        transparent 40deg,  rgba(255,220,80,0.35) 50deg,
+        transparent 60deg,  rgba(255,220,80,0.35) 70deg,
+        transparent 80deg,  rgba(255,220,80,0.35) 90deg,
+        transparent 100deg, rgba(255,220,80,0.35) 110deg,
+        transparent 120deg, rgba(255,220,80,0.35) 130deg,
+        transparent 140deg, rgba(255,220,80,0.35) 150deg,
+        transparent 160deg, rgba(255,220,80,0.35) 170deg,
+        transparent 180deg, rgba(255,220,80,0.35) 190deg,
+        transparent 200deg, rgba(255,220,80,0.35) 210deg,
+        transparent 220deg, rgba(255,220,80,0.35) 230deg,
+        transparent 240deg, rgba(255,220,80,0.35) 250deg,
+        transparent 260deg, rgba(255,220,80,0.35) 270deg,
+        transparent 280deg, rgba(255,220,80,0.35) 290deg,
+        transparent 300deg, rgba(255,220,80,0.35) 310deg,
+        transparent 320deg, rgba(255,220,80,0.35) 330deg,
+        transparent 340deg, rgba(255,220,80,0.35) 350deg,
+        transparent 360deg
+      );
+      border-radius: 50%;
+      animation: bmo-spin 3s linear infinite;
+      z-index: 0;
+    }
+    @keyframes bmo-spin {
+      from { transform: translate(-50%,-50%) rotate(0deg); }
+      to   { transform: translate(-50%,-50%) rotate(360deg); }
+    }
+    #big-merge-fruit {
+      width: 180px; height: 180px;
+      object-fit: contain;
+      filter: drop-shadow(0 0 24px rgba(255,200,0,0.9))
+              drop-shadow(0 0 48px rgba(255,100,0,0.6));
+      position: relative; z-index: 1;
+      opacity: 0;
+    }
+    #big-merge-fruit.show {
+      animation: bmo-fruit 2s ease forwards;
+    }
+    @keyframes bmo-fruit {
+      0%   { transform: scale(0.3) rotate(-15deg); opacity: 0; }
+      15%  { transform: scale(1.25) rotate(5deg);  opacity: 1; }
+      30%  { transform: scale(1.0)  rotate(0deg);  opacity: 1; }
+      75%  { transform: scale(1.0)  rotate(0deg);  opacity: 1; }
+      100% { transform: scale(1.15) rotate(3deg);  opacity: 0; }
+    }
+    #big-merge-text {
+      font-size: 64px;
+      font-weight: 900;
+      letter-spacing: 3px;
+      position: relative; z-index: 1;
+      margin-top: 12px;
+      -webkit-text-stroke: 4px rgba(0,0,0,0.25);
+      opacity: 0;
+    }
+    #big-merge-text.show {
+      animation: bmo-text 2s ease forwards;
+    }
+    @keyframes bmo-text {
+      0%   { transform: scale(0.5) translateY(30px);  opacity: 0; }
+      20%  { transform: scale(1.15) translateY(0);    opacity: 1; }
+      35%  { transform: scale(1.0)  translateY(0);    opacity: 1; }
+      75%  { transform: scale(1.0)  translateY(0);    opacity: 1; }
+      100% { transform: scale(0.9) translateY(-20px); opacity: 0; }
+    }
+
+    /* ── 连击横幅 ── */
+    #combo-banner {
+      position: absolute;
+      top: 110px;
+      left: 50%;
+      transform: translateX(-50%) scale(0.5);
+      transform-origin: center top;
+      white-space: nowrap;
+      font-size: 36px;
+      font-weight: 900;
+      color: #fff;
+      text-shadow:
+        0 0 12px #ff8800,
+        2px 2px 0 #c85000;
+      letter-spacing: 2px;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 30;
+      transition: none;
+    }
+    #combo-banner.show {
+      animation: combo-pop 1.2s ease forwards;
+    }
+    @keyframes combo-pop {
+      0%   { opacity: 1; transform: translateX(-50%) scale(1.3); }
+      15%  { transform: translateX(-50%) scale(1.0); }
+      70%  { opacity: 1; }
+      100% { opacity: 0; transform: translateX(-50%) scale(0.9) translateY(-20px); }
+    }
+
     /* ── 死亡线 ── */
     #lose-line {
       position: absolute;
@@ -308,7 +457,7 @@
 
       <!-- 右：NEXT 预览球 -->
       <div id="panel-next">
-        <div class="next-label">NEXT</div>
+        <div class="next-label">下一个</div>
         <div id="panel-next-fruit-wrap">
           <img id="game-next-fruit" src="./assets/img/circle0.png" />
         </div>
@@ -323,16 +472,26 @@
 
           <!-- 死亡线 -->
           <div id="lose-line">
-            <span id="lose-line-label">GAME OVER</span>
+            <span id="lose-line-label">游戏结束</span>
           </div>
 
           <div id="game-end-container">
             <div id="game-end">
-              <div id="game-end-title">Game Over!</div>
-              <a id="game-end-link" href="">Try Again</a>
+              <div id="game-end-title">游戏结束！</div>
+              <a id="game-end-link" href="">再来一局</a>
             </div>
           </div>
 
+        </div>
+        <!-- 粒子 & 飞字特效层 -->
+        <canvas id="fx-canvas"></canvas>
+        <!-- 连击横幅 -->
+        <div id="combo-banner"></div>
+        <!-- 大合成特效 -->
+        <div id="big-merge-overlay">
+          <div id="big-merge-rays"></div>
+          <img id="big-merge-fruit" src="" />
+          <div id="big-merge-text"></div>
         </div>
       </div>
     </div>

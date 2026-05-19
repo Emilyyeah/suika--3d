@@ -19,6 +19,217 @@ const {
 const wallPad = 64;
 const loseHeight = 84;
 const previewBallHeight = 32;
+
+// 越线多少毫秒后才判负（防止弹起瞬间误判）
+const LOSE_GRACE_MS = 500;
+let loseTimer = null;
+
+// ── 粒子系统 ────────────────────────────────────────────────
+const fxCanvas = document.getElementById('fx-canvas');
+const fxCtx = fxCanvas.getContext('2d');
+// 粒子池
+const particles = [];
+
+// 每帧更新粒子
+function tickParticles() {
+  fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x  += p.vx;
+    p.y  += p.vy;
+    p.vy += 0.35;          // 重力
+    p.vx *= 0.97;
+    p.life -= 1;
+    p.alpha = Math.max(0, p.life / p.maxLife);
+
+    if (p.type === 'score') {
+      // 飞字
+      fxCtx.save();
+      fxCtx.globalAlpha = p.alpha;
+      fxCtx.font = `900 ${p.fontSize}px 'Azeret Mono', sans-serif`;
+      fxCtx.fillStyle = p.color;
+      fxCtx.strokeStyle = 'rgba(0,0,0,0.3)';
+      fxCtx.lineWidth = 3;
+      fxCtx.strokeText(p.text, p.x, p.y);
+      fxCtx.fillText(p.text, p.x, p.y);
+      fxCtx.restore();
+    } else {
+      // 圆形粒子
+      fxCtx.save();
+      fxCtx.globalAlpha = p.alpha;
+      fxCtx.fillStyle = p.color;
+      fxCtx.beginPath();
+      fxCtx.arc(p.x, p.y, p.radius * p.alpha + 1, 0, Math.PI * 2);
+      fxCtx.fill();
+      fxCtx.restore();
+    }
+
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+  requestAnimationFrame(tickParticles);
+}
+requestAnimationFrame(tickParticles);
+
+// 爆出彩色粒子（合并特效）
+const PARTICLE_COLORS = [
+  '#ff5500','#ffaa00','#ffdd00','#66dd00','#00ccff','#cc44ff','#ff44aa','#ffffff'
+];
+function spawnParticles(x, y, r, count = 18) {
+  for (let i = 0; i < count; i++) {
+    const angle = rand() * Math.PI * 2;
+    const speed = 2 + rand() * 5 * (r / 80);
+    particles.push({
+      type: 'dot',
+      x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 2,
+      radius: 3 + rand() * 5,
+      color: PARTICLE_COLORS[Math.floor(rand() * PARTICLE_COLORS.length)],
+      life: 28 + Math.floor(rand() * 20),
+      maxLife: 48,
+      alpha: 1,
+    });
+  }
+}
+
+// 分数飞字
+function spawnScoreText(x, y, points, isCombo = false) {
+  const colors = isCombo
+    ? ['#ffdd00', '#ff8800', '#ff4400']
+    : ['#ffffff', '#ffe080', '#ffcc00'];
+  particles.push({
+    type: 'score',
+    x: x - 20,
+    y: y,
+    vx: (rand() - 0.5) * 1.5,
+    vy: -3.5 - rand() * 2,
+    text: isCombo ? `+${points} 连击！` : `+${points}`,
+    fontSize: isCombo ? 28 : 22,
+    color: colors[Math.floor(rand() * colors.length)],
+    life: 55,
+    maxLife: 55,
+    alpha: 1,
+  });
+}
+
+// ── 大合成特效（合成倒数第3、2、1级时触发）──────────────────
+const BIG_MERGE_LEVELS = {
+  // sizeIndex（合成前的级别） → 配置
+  8: { label: 'GREAT！',       color: '#ff9900', shadow: '#ff5500' },
+  9: { label: 'AWESOME！',     color: '#ff44cc', shadow: '#aa00aa' },
+ 10: { label: 'UNBELIEVABLE！',color: '#00ddff', shadow: '#0044ff' },
+};
+let bigMergeTimer = null;
+const bigMergeOverlay = document.getElementById('big-merge-overlay');
+const bigMergeFruit   = document.getElementById('big-merge-fruit');
+const bigMergeTextEl  = document.getElementById('big-merge-text');
+
+function triggerBigMerge(sizeIndex, fruitImg) {
+  const cfg = BIG_MERGE_LEVELS[sizeIndex];
+  if (!cfg) return;
+
+  if (bigMergeTimer) {
+    clearTimeout(bigMergeTimer);
+    bigMergeTimer = null;
+  }
+
+  // 用 cloneNode 替换元素来强制重置动画（比 reflow 更可靠）
+  function resetAnim(el) {
+    const clone = el.cloneNode(true);
+    el.parentNode.replaceChild(clone, el);
+    return clone;
+  }
+
+  const overlay = resetAnim(bigMergeOverlay);
+  // 替换后重新获取子元素
+  const fruit   = overlay.querySelector('#big-merge-fruit');
+  const textEl  = overlay.querySelector('#big-merge-text');
+
+  // 更新全局引用
+  bigMergeOverlay.id && (window._bmoOverlay = overlay);
+
+  fruit.src          = fruitImg;
+  textEl.textContent = cfg.label;
+  textEl.style.color = cfg.color;
+  textEl.style.textShadow =
+    `0 0 20px ${cfg.shadow}, 0 0 40px ${cfg.color}, 3px 3px 0 rgba(0,0,0,0.3)`;
+
+  // 触发 show（requestAnimationFrame 确保浏览器已渲染初始状态）
+  requestAnimationFrame(() => {
+    overlay.classList.add('show');
+    fruit.classList.add('show');
+    textEl.classList.add('show');
+  });
+
+  // 大量粒子爆炸
+  spawnParticles(Game.width / 2, Game.height / 2, 120, 60);
+
+  bigMergeTimer = setTimeout(() => {
+    overlay.classList.remove('show');
+    fruit.classList.remove('show');
+    textEl.classList.remove('show');
+    bigMergeTimer = null;
+  }, 2100);
+}
+
+// ── 连击系统 ────────────────────────────────────────────────
+// 连击定义：同一颗投下球引发的连锁合成次数（用 dropId 追踪归属）。
+// 每次新投球时产生新 dropId，合成出的子球继承父球的 dropId。
+// 相同 dropId 的合成才计连击，跨球不累积。
+const COMBO_BONUS_BASE = 5; // 连击每层固定奖励分
+
+// 每个 dropId 独立维护一个 comboCount
+const comboMap = new Map(); // dropId -> count
+
+let currentDropId = 0; // 单调递增，每次 addFruit +1
+
+const comboBanner = document.getElementById('combo-banner');
+
+function triggerCombo(dropId, x, y) {
+  const count = (comboMap.get(dropId) || 0) + 1;
+  comboMap.set(dropId, count);
+
+  if (count >= 2) {
+    const bonus = COMBO_BONUS_BASE * (count - 1);
+    Game._comboBonus = (Game._comboBonus || 0) + bonus;
+
+    comboBanner.textContent = `${count}× 连击！`;
+    comboBanner.classList.remove('show');
+    void comboBanner.offsetWidth;
+    comboBanner.classList.add('show');
+
+    spawnScoreText(x, y - 30, bonus, true);
+    Game.calculateScore();
+  }
+}
+
+// ── 投放冷却：等球首次碰撞才允许投下一颗 ──────────────────
+// "落地" = 投出的球第一次碰到任何物体（地板/其他球）。
+// 用 collisionStart 监听，避免轮询，最准确。
+const MAX_WAIT_MS = 2500; // 兜底超时，防止球永远悬空
+let dropBall = null;
+let dropWatchTimer = null;
+
+function watchDropBall(ball) {
+  dropBall = ball;
+
+  // 兜底定时器
+  dropWatchTimer = setTimeout(() => {
+    unlockNextDrop();
+  }, MAX_WAIT_MS);
+}
+
+function unlockNextDrop() {
+  if (Game.stateIndex !== GameStates.DROP) return;
+  if (dropWatchTimer !== null) {
+    clearTimeout(dropWatchTimer);
+    dropWatchTimer = null;
+  }
+  dropBall = null;
+  Composite.add(engine.world, Game.elements.previewBall);
+  Game.stateIndex = GameStates.READY;
+}
+
 const friction = {
 	friction: 0.006,
 	frictionStatic: 0.006,
@@ -70,7 +281,7 @@ const Game = {
 		const score = Game.fruitsMerged.reduce((total, count, sizeIndex) => {
 			const value = Game.fruitSizes[sizeIndex].scoreValue * count;
 			return total + value;
-		}, 0);
+		}, 0) + (Game._comboBonus || 0);
 
 		Game.score = score;
 		Game.elements.score.innerText = Game.score;
@@ -113,7 +324,7 @@ const Game = {
 		if (Game.score < Game.cache.highscore) return;
 
 		Game.cache.highscore = Game.score;
-		Game.elements.endTitle.innerText = 'New Highscore!';
+		Game.elements.endTitle.innerText = '新纪录！';
 
 		localStorage.setItem('suika-game-cache', JSON.stringify(Game.cache));
 	},
@@ -146,8 +357,10 @@ const Game = {
 		Composite.remove(engine.world, menuStatics);
 		Composite.add(engine.world, gameStatics);
 
+		Game.score = 0;
+		Game._comboBonus = 0;
 		Game.calculateScore();
-		Game.elements.endTitle.innerText = 'Game Over!';
+		Game.elements.endTitle.innerText = '游戏结束！';
 		Game.elements.ui.style.display = 'block';
 		Game.elements.end.style.display = 'none';
 		Game.elements.previewBall = Game.generateFruitBody(Game.width / 2, previewBallHeight, 0, { isStatic: true });
@@ -167,8 +380,10 @@ const Game = {
 			if (Game.stateIndex !== GameStates.READY) return;
 			if (Game.elements.previewBall === null) return;
 
+			const r = Game.fruitSizes[Game.currentFruitSize].radius;
+			const clampedX = Math.max(r, Math.min(Game.width - r, e.mouse.position.x));
 			Body.setPosition(Game.elements.previewBall, {
-				x: e.mouse.position.x,
+				x: clampedX,
 				y: previewBallHeight,
 			});
 		});
@@ -177,37 +392,32 @@ const Game = {
 			// 已结束则忽略所有碰撞
 			if (Game.stateIndex === GameStates.LOSE) return;
 
+			// ── 检测投出球是否首次碰撞（落地）→ 解锁下一次投球 ──
+			if (dropBall !== null && Game.stateIndex === GameStates.DROP) {
+				for (const pair of e.pairs) {
+					if (pair.bodyA === dropBall || pair.bodyB === dropBall) {
+						unlockNextDrop();
+						break;
+					}
+				}
+			}
+
+			// 本帧按 dropId 分组，每个 dropId 最多触发一次连击计数
+			const mergedDropIds = new Set();
+			let firstMergeX = 0, firstMergeY = 0, firstMerged = false;
+
 			for (let i = 0; i < e.pairs.length; i++) {
 				const { bodyA, bodyB } = e.pairs[i];
 
-				// Skip if collision is wall
 				if (bodyA.isStatic || bodyB.isStatic) continue;
-
-				const aY = bodyA.position.y + bodyA.circleRadius;
-				const bY = bodyB.position.y + bodyB.circleRadius;
-
-				// Uh oh, too high!
-				if (aY < loseHeight || bY < loseHeight) {
-					Game.loseGame();
-					return;
-				}
-
-				// Skip different sizes
 				if (bodyA.sizeIndex !== bodyB.sizeIndex) continue;
-
-				// Skip if already popped
 				if (bodyA.popped || bodyB.popped) continue;
 
 				let newSize = bodyA.sizeIndex + 1;
-
-				// Go back to smallest size
 				if (bodyA.circleRadius >= Game.fruitSizes[Game.fruitSizes.length - 1].radius) {
 					newSize = 0;
 				}
 
-				Game.fruitsMerged[bodyA.sizeIndex] += 1;
-
-				// Therefore, circles are same size, so merge them.
 				const midPosX = (bodyA.position.x + bodyB.position.x) / 2;
 				const midPosY = (bodyA.position.y + bodyB.position.y) / 2;
 
@@ -218,11 +428,81 @@ const Game = {
 				sound.currentTime = 0;
 				sound.play();
 				Composite.remove(engine.world, [bodyA, bodyB]);
-				Composite.add(engine.world, Game.generateFruitBody(midPosX, midPosY, newSize));
+
+				// 合成球继承父球的 dropId（优先用有 dropId 的那个）
+				const inheritedDropId = bodyA.dropId ?? bodyB.dropId ?? 0;
+				const newFruit = Game.generateFruitBody(midPosX, midPosY, newSize);
+				newFruit.dropId = inheritedDropId;
+				Composite.add(engine.world, newFruit);
+
 				Game.addPop(midPosX, midPosY, bodyA.circleRadius);
+
+				const particleCount = 12 + bodyA.sizeIndex * 3;
+				spawnParticles(midPosX, midPosY, bodyA.circleRadius, particleCount);
+
+				const mergePoints = Game.fruitSizes[bodyA.sizeIndex].scoreValue;
+				spawnScoreText(midPosX, midPosY, mergePoints);
+
+				// 大合成特效：合成倒数后3级时全屏爆发
+				triggerBigMerge(bodyA.sizeIndex, Game.fruitSizes[bodyA.sizeIndex].img);
+
+				Game.fruitsMerged[bodyA.sizeIndex] += 1;
 				Game.calculateScore();
-				Game.unlockCompendium(bodyA.sizeIndex); // 解锁参与合成的球
-				Game.unlockCompendium(newSize);          // 解锁合成产生的新球
+				Game.unlockCompendium(bodyA.sizeIndex);
+				Game.unlockCompendium(newSize);
+
+				// 记录每个 dropId 本帧首次合成位置
+				if (inheritedDropId && !mergedDropIds.has(inheritedDropId)) {
+					mergedDropIds.add(inheritedDropId);
+					if (!firstMerged) {
+						firstMergeX = midPosX;
+						firstMergeY = midPosY;
+						firstMerged = true;
+					}
+				}
+			}
+
+			// 每个 dropId 各自触发一次连击计数
+			for (const dropId of mergedDropIds) {
+				triggerCombo(dropId, firstMergeX, firstMergeY);
+			}
+		});
+
+		// ── 每物理帧扫描所有球，只要有球顶部持续在死亡线以上就判负 ──
+		// collisionStart 只在新碰撞时触发，球静止堆在线上不会再触发，
+		// 必须用 afterUpdate 做持续检测。
+		Events.on(engine, 'afterUpdate', function () {
+			if (Game.stateIndex === GameStates.LOSE) return;
+
+			const bodies = Composite.allBodies(engine.world);
+			let overLine = false;
+
+			for (const body of bodies) {
+				if (body.isStatic) continue;
+				// 刚投放的球（出生 < 1000ms）从顶部落下，跳过避免误判
+				if (body.birthTime && Date.now() - body.birthTime < 1000) continue;
+				// 球的顶部超过死亡线（注意：y 向下，顶部 = y - radius）
+				if (body.position.y - body.circleRadius < loseHeight) {
+					overLine = true;
+					break;
+				}
+			}
+
+			if (overLine) {
+				if (loseTimer === null) {
+					// 首次越线：启动 500ms 容错计时（防止弹起瞬间误判）
+					loseTimer = setTimeout(() => {
+						if (Game.stateIndex !== GameStates.LOSE) {
+							Game.loseGame();
+						}
+					}, LOSE_GRACE_MS);
+				}
+			} else {
+				// 这帧没有任何球越线，取消计时器
+				if (loseTimer !== null) {
+					clearTimeout(loseTimer);
+					loseTimer = null;
+				}
 			}
 		});
 	},
@@ -248,6 +528,10 @@ const Game = {
 	},
 
 	loseGame: function () {
+		if (loseTimer !== null) {
+			clearTimeout(loseTimer);
+			loseTimer = null;
+		}
 		Game.stateIndex = GameStates.LOSE;
 		Game.elements.end.style.display = 'flex';
 		runner.enabled = false;
@@ -263,6 +547,7 @@ const Game = {
 		});
 		circle.sizeIndex = sizeIndex;
 		circle.popped = false;
+		// birthTime 不在这里设置，由调用方按需打标（只有从顶部投下的球才需要）
 
 		return circle;
 	},
@@ -272,8 +557,14 @@ const Game = {
 
 		Game.sounds.click.play();
 
+		// 投放位置也做边界裁剪，防止球落在墙外
+		const r = Game.fruitSizes[Game.currentFruitSize].radius;
+		const clampedX = Math.max(r, Math.min(Game.width - r, x));
+
 		Game.stateIndex = GameStates.DROP;
-		const latestFruit = Game.generateFruitBody(x, previewBallHeight, Game.currentFruitSize);
+		const latestFruit = Game.generateFruitBody(clampedX, previewBallHeight, Game.currentFruitSize);
+		latestFruit.birthTime = Date.now(); // 只有从顶部投下的球才有出生保护
+		latestFruit.dropId = ++currentDropId; // 归属批次，用于连击追踪
 		Composite.add(engine.world, latestFruit);
 
 		// 投放时点亮图鉴（首次出现即解锁）
@@ -289,12 +580,9 @@ const Game = {
 			collisionFilter: { mask: 0x0040 }
 		});
 
-		setTimeout(() => {
-			if (Game.stateIndex === GameStates.DROP) {
-				Composite.add(engine.world, Game.elements.previewBall);
-				Game.stateIndex = GameStates.READY;
-			}
-		}, 350);
+		// 速度感知冷却：球落稳后才恢复 READY，最长等待 MAX_WAIT_MS
+		if (dropWatchTimer !== null) clearTimeout(dropWatchTimer);
+		watchDropBall(latestFruit);
 	}
 }
 
@@ -399,10 +687,66 @@ const resizeCanvas = () => {
 	render.canvas.style.width  = `${canvasW}px`;
 	render.canvas.style.height = `${canvasH}px`;
 
+	// #game-canvas 显式设尺寸，确保绝对定位子元素（特效overlay等）能铺满
+	Game.elements.canvas.style.width  = `${canvasW}px`;
+	Game.elements.canvas.style.height = `${canvasH}px`;
+
+	// fx-canvas 跟随逻辑尺寸，transform 同步缩放
+	fxCanvas.width  = Game.width;
+	fxCanvas.height = Game.height;
+	fxCanvas.style.width  = `${canvasW}px`;
+	fxCanvas.style.height = `${canvasH}px`;
+
 	Game.elements.ui.style.width  = `${Game.width}px`;
 	Game.elements.ui.style.height = `${Game.height}px`;
 	Game.elements.ui.style.transform = `scale(${scaleUI})`;
+
+	// combo-banner 跟随缩放
+	comboBanner.style.transform = `translateX(-50%) scale(${scaleUI})`;
+	comboBanner.style.transformOrigin = 'center top';
 };
 
-document.body.onload = resizeCanvas;
-document.body.onresize = resizeCanvas;
+// 防抖：窗口 resize 结束 100ms 后才执行，避免频繁触发
+let resizeTimer = null;
+window.addEventListener('resize', () => {
+	clearTimeout(resizeTimer);
+	resizeTimer = setTimeout(resizeCanvas, 100);
+});
+
+// 初始化时立即执行一次
+resizeCanvas();
+
+// ── 触屏支持 ──────────────────────────────────────────────
+// Matter.js Mouse 模块对触屏支持不稳定，手动补充 touch 事件。
+// 将触摸坐标换算成画布内的逻辑坐标，再映射到对应操作。
+
+function touchToCanvasX(touch) {
+	const rect = render.canvas.getBoundingClientRect();
+	// clientWidth 是 CSS 像素尺寸，Game.width 是逻辑坐标宽度
+	const scaleX = Game.width / rect.width;
+	return (touch.clientX - rect.left) * scaleX;
+}
+
+render.canvas.addEventListener('touchmove', (e) => {
+	e.preventDefault();
+	if (Game.stateIndex !== GameStates.READY) return;
+	if (Game.elements.previewBall === null) return;
+
+	const x = touchToCanvasX(e.touches[0]);
+	const r = Game.fruitSizes[Game.currentFruitSize].radius;
+	const clampedX = Math.max(r, Math.min(Game.width - r, x));
+	Body.setPosition(Game.elements.previewBall, { x: clampedX, y: previewBallHeight });
+}, { passive: false });
+
+render.canvas.addEventListener('touchend', (e) => {
+	e.preventDefault();
+	// 用最后离开的触点坐标投球
+	const touch = e.changedTouches[0];
+	const x = touchToCanvasX(touch);
+
+	// 菜单阶段：模拟点击 btn-start（Matter.js 的菜单交互保留鼠标）
+	// 游戏阶段：直接投球
+	if (Game.stateIndex === GameStates.READY || Game.stateIndex === GameStates.DROP) {
+		Game.addFruit(x);
+	}
+}, { passive: false });
