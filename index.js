@@ -13,12 +13,11 @@ const rand = mulberry32(Date.now());
 
 const {
 	Engine, Render, Runner, Composites, Common, MouseConstraint, Mouse,
-	Composite, Bodies, Events,
+	Composite, Bodies, Events, Body,
 } = Matter;
 
 const wallPad = 64;
 const loseHeight = 84;
-const statusBarHeight = 48;
 const previewBallHeight = 32;
 const friction = {
 	friction: 0.006,
@@ -44,6 +43,7 @@ const Game = {
 		end: document.getElementById('game-end-container'),
 		endTitle: document.getElementById('game-end-title'),
 		nextFruitImg: document.getElementById('game-next-fruit'),
+		compendiumItems: document.querySelectorAll('.compendium-item'),
 		previewBall: null,
 	},
 	cache: { highscore: 0 },
@@ -78,12 +78,8 @@ const Game = {
 
 	// 图鉴：点亮已合成过的球（两个球合成后，点亮合成前的等级）
 	unlockCompendium: function (sizeIndex) {
-		const items = document.querySelectorAll('.compendium-item');
-		// compendium-row 里每隔一个是箭头，item 在奇数位(0-based): 0,2,4...
-		// sizeIndex 0→items[0], 1→items[1]...
-		if (items[sizeIndex]) {
-			items[sizeIndex].classList.add('unlocked');
-		}
+		const item = Game.elements.compendiumItems[sizeIndex];
+		if (item) item.classList.add('unlocked');
 	},
 
 	fruitSizes: [
@@ -171,10 +167,16 @@ const Game = {
 			if (Game.stateIndex !== GameStates.READY) return;
 			if (Game.elements.previewBall === null) return;
 
-			Game.elements.previewBall.position.x = e.mouse.position.x;
+			Body.setPosition(Game.elements.previewBall, {
+				x: e.mouse.position.x,
+				y: previewBallHeight,
+			});
 		});
 
 		Events.on(engine, 'collisionStart', function (e) {
+			// 已结束则忽略所有碰撞
+			if (Game.stateIndex === GameStates.LOSE) return;
+
 			for (let i = 0; i < e.pairs.length; i++) {
 				const { bodyA, bodyB } = e.pairs[i];
 
@@ -212,7 +214,9 @@ const Game = {
 				bodyA.popped = true;
 				bodyB.popped = true;
 
-				Game.sounds[`pop${bodyA.sizeIndex}`].play();
+				const sound = Game.sounds[`pop${bodyA.sizeIndex}`];
+				sound.currentTime = 0;
+				sound.play();
 				Composite.remove(engine.world, [bodyA, bodyB]);
 				Composite.add(engine.world, Game.generateFruitBody(midPosX, midPosY, newSize));
 				Game.addPop(midPosX, midPosY, bodyA.circleRadius);
@@ -248,15 +252,6 @@ const Game = {
 		Game.elements.end.style.display = 'flex';
 		runner.enabled = false;
 		Game.saveHighscore();
-	},
-
-	// Returns an index, or null
-	lookupFruitIndex: function (radius) {
-		const sizeIndex = Game.fruitSizes.findIndex(size => size.radius == radius);
-		if (sizeIndex === undefined) return null;
-		if (sizeIndex === Game.fruitSizes.length - 1) return null;
-
-		return sizeIndex;
 	},
 
 	generateFruitBody: function (x, y, sizeIndex, extraConfig = {}) {
@@ -299,7 +294,7 @@ const Game = {
 				Composite.add(engine.world, Game.elements.previewBall);
 				Game.stateIndex = GameStates.READY;
 			}
-		}, 500);
+		}, 350);
 	}
 }
 
@@ -361,7 +356,7 @@ const gameStatics = [
 	Bodies.rectangle(Game.width + (wallPad / 2), Game.height / 2, wallPad, Game.height, wallProps),
 
 	// Bottom
-	Bodies.rectangle(Game.width / 2, Game.height + (wallPad / 2) - statusBarHeight, Game.width, wallPad, wallProps),
+	Bodies.rectangle(Game.width / 2, Game.height + (wallPad / 2), Game.width, wallPad, wallProps),
 ];
 
 // add mouse control
