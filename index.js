@@ -276,7 +276,7 @@ function triggerBigMerge(sizeIndex, fruitImg) {
 // ── 连击系统（时间窗口制）────────────────────────────────────
 // 定义：任意合并发生后 2s 内再次发生合并即为连击，超时重置。
 // 从 2× 开始显示横幅，最高封顶 10×，10× 后不再加分。
-const COMBO_BONUS_BASE = 5; // 连击每层固定奖励分
+const COMBO_BONUS_BASE = 1; // 连击每层固定奖励分
 const COMBO_WINDOW_MS  = 1200; // 时间窗口
 const COMBO_MAX        = 10;   // 连击封顶
 let comboCount    = 0;       // 当前连击次数
