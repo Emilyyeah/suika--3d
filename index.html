@@ -56,14 +56,33 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 20px;
+      padding: 0 16px;
+      position: relative;
     }
 
-    /* 左侧：分数区 */
+    /* 左侧：返回按钮 */
+    #btn-back {
+      flex-shrink: 0;
+      background: rgba(255,255,255,0.85);
+      border: 2px solid #c8700a;
+      border-radius: 12px;
+      padding: 8px 14px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #c8700a;
+      cursor: pointer;
+      font-family: 'Azeret Mono', sans-serif;
+      pointer-events: auto;
+    }
+    #btn-back:hover { background: #fff; }
+
+    /* 中间：分数 + 剩余次数 */
     #panel-score {
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      align-items: center;
+      gap: 2px;
+      flex: 1;
     }
 
     .score-label {
@@ -75,15 +94,23 @@
     }
 
     .score-value {
-      font-size: 56px;
+      font-size: 52px;
       font-weight: 900;
       color: var(--col-primary-dark);
       line-height: 1;
       text-shadow: 2px 2px 0 rgba(255,83,0,0.2);
     }
 
+    #challenge-count-text {
+      font-size: 12px;
+      font-weight: 700;
+      color: #b85c00;
+      letter-spacing: 0.5px;
+    }
+
     /* 右侧：NEXT 预览区 */
     #panel-next {
+      flex-shrink: 0;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -99,8 +126,8 @@
     }
 
     #panel-next-fruit-wrap {
-      width: 72px;
-      height: 72px;
+      width: 64px;
+      height: 64px;
       border-radius: 50%;
       background: rgba(255,255,255,0.5);
       border: 2px solid rgba(255,140,0,0.4);
@@ -110,8 +137,8 @@
     }
 
     #game-next-fruit {
-      width: 56px;
-      height: 56px;
+      width: 50px;
+      height: 50px;
       display: block;
     }
 
@@ -332,45 +359,137 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background-color: var(--col-shadow);
+      background-color: rgba(0,0,0,0.45);
     }
 
-    #game-end {
+    /* ── 通用弹窗样式（所有弹窗完全一致的尺寸和外观） ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.45);
+    }
+    .modal-overlay.show { display: flex; }
+
+    .modal-box {
+      position: relative;
+      background: #FFEEDB;
+      border: 4px solid var(--col-primary);
+      border-radius: 24px;
+      padding: 28px 24px 24px;
       text-align: center;
-      padding: 32px 48px;
-      background-color: var(--col-bg-lighter);
-      border: 5px solid var(--col-primary);
-      box-shadow: 0 4px 32px var(--col-shadow);
-      border-radius: 32px;
-      margin: 0 auto;
-      pointer-events: initial;
-      user-select: initial;
+      width: 280px;           /* 固定宽度，所有弹窗一致 */
+      box-shadow: 0 4px 24px rgba(0,0,0,0.25);
+      box-sizing: border-box;
     }
 
-    #game-end-title {
-      font-weight: 700;
-      font-size: 48px;
+    .modal-title {
+      font-size: 20px;
+      font-weight: 900;
       color: var(--col-primary-dark);
+      margin-bottom: 8px;
     }
-
-    #game-end-link {
-      display: inline-block;
-      color: var(--col-white);
-      font-size: 24px;
+    .modal-desc {
+      font-size: 13px;
+      color: #a06030;
+      line-height: 1.8;
+      margin-bottom: 20px;
+    }
+    .modal-btns {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .modal-btn {
+      flex: 1;
+      padding: 13px 0;
+      border-radius: 14px;
+      font-size: 16px;
+      font-weight: 700;
+      font-family: 'Azeret Mono', sans-serif;
+      cursor: pointer;
+      border: none;
       text-decoration: none;
-      background-color: var(--col-primary-light);
-      margin-top: 16px;
-      padding: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+    }
+    .modal-btn-secondary {
+      background: #fff;
+      color: var(--col-primary);
+      border: 2px solid var(--col-primary-light);
+    }
+    .modal-btn-primary {
+      background: var(--col-primary-light);
+      color: #fff;
+      box-shadow: 0 3px 0 #c85000;
+    }
+    .modal-btn-primary:hover { background: var(--col-primary); }
+    .modal-btn-secondary:hover { background: #fff5e8; }
+
+    /* 游戏结束弹窗：得分区 */
+    #game-end-score-wrap {
+      margin: 6px 0 0;
+    }
+    #game-end-score-label {
+      font-size: 13px;
+      font-weight: 700;
+      color: #b85c00;
+    }
+    #game-end-score-value {
+      font-size: 48px;
+      font-weight: 900;
+      color: var(--col-primary-dark);
+      line-height: 1.15;
+      text-shadow: 2px 2px 0 rgba(255,83,0,0.15);
+    }
+
+    /* ── 退出确认弹窗 ── */
+    #quit-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.45);
+    }
+    #quit-modal.show { display: flex; }
+
+    /* ── 菜单覆盖层（次数=0时置灰开始按钮） ── */
+    #menu-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      pointer-events: none;
+      z-index: 100;
+      padding-bottom: 108px; /* 对齐 Matter.js 开始按钮 */
+    }
+
+    /* 次数=0 时开始按钮遮罩 */
+    #btn-start-disabled {
+      pointer-events: auto;
+      display: none;
+      width: 220px;
+      height: 60px;
+      background: rgba(80,80,80,0.75);
       border-radius: 16px;
-      box-shadow: 4px 4px 0 var(--col-shadow);
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 700;
+      color: rgba(255,255,255,0.4);
+      letter-spacing: 1px;
+      font-family: 'Azeret Mono', sans-serif;
+      cursor: not-allowed;
     }
-
-    #game-end-link:hover {
-      background-color: var(--col-primary);
-      box-shadow: 6px 6px 0 var(--col-shadow);
-    }
-
-    /* ── 底部图鉴 ── */
     #panel-bottom {
       flex-shrink: 0;
       width: 100%;
@@ -449,10 +568,14 @@
     <!-- 顶部信息栏 -->
     <div id="panel-top">
 
-      <!-- 左：分数 -->
+      <!-- 左：返回按钮 -->
+      <button id="btn-back">← 返回</button>
+
+      <!-- 中：分数 + 剩余次数 -->
       <div id="panel-score">
         <div class="score-label">分数</div>
         <div class="score-value" id="top-score-value">0</div>
+        <div id="challenge-count-text">剩余次数：<span id="challenge-count-num">3</span> 次</div>
       </div>
 
       <!-- 右：NEXT 预览球 -->
@@ -475,14 +598,13 @@
             <span id="lose-line-label">游戏结束</span>
           </div>
 
-          <div id="game-end-container">
-            <div id="game-end">
-              <div id="game-end-title">游戏结束！</div>
-              <a id="game-end-link" href="">再来一局</a>
-            </div>
-          </div>
-
         </div>
+
+        <!-- 菜单覆盖层（次数=0时遮住开始按钮） -->
+        <div id="menu-overlay">
+          <div id="btn-start-disabled">开始游戏</div>
+        </div>
+
         <!-- 粒子 & 飞字特效层 -->
         <canvas id="fx-canvas"></canvas>
         <!-- 连击横幅 -->
@@ -513,7 +635,42 @@
     </div>
 
   </div>
+  </div>
+
+  <!-- 游戏结束弹窗 -->
+  <div id="game-end-container" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-title">游戏结束！</div>
+      <div id="game-end-score-wrap">
+        <div id="game-end-score-label">本局得分</div>
+        <div id="game-end-score-value">0</div>
+      </div>
+      <div id="game-end-has-chance" class="modal-btns" style="display:none;">
+        <a id="game-end-back-link" href="" class="modal-btn modal-btn-secondary">返回</a>
+        <a id="game-end-link" href="" class="modal-btn modal-btn-primary">再来一局</a>
+      </div>
+      <div id="game-end-no-chance" style="display:none;">
+        <div class="modal-desc" style="margin-top:8px;margin-bottom:0;">挑战次数已用完</div>
+        <div class="modal-btns">
+          <a id="game-end-back-link2" href="" class="modal-btn modal-btn-primary">返回</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 退出确认弹窗 -->
+  <div id="quit-modal">
+    <div class="modal-box">
+      <div class="modal-title">确认结束游戏？</div>
+      <div class="modal-desc">游戏将直接结束，<br>以当前得分计入本局。</div>
+      <div class="modal-btns">
+        <button id="quit-cancel" class="modal-btn modal-btn-secondary">继续游戏</button>
+        <button id="quit-confirm" class="modal-btn modal-btn-primary">确认退出</button>
+      </div>
+    </div>
+  </div>
+
   <script type="text/javascript" src="./matter.js"></script>
-  <script type="text/javascript" src="./index.js?v=16"></script>
+  <script type="text/javascript" src="./index.js?v=24"></script>
 </body>
 </html>

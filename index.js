@@ -231,6 +231,67 @@ const friction = {
 	restitution: 0.1
 };
 
+// ── 挑战次数 ──────────────────────────────────────────────────
+// TODO: 后续替换为 API 获取真实次数
+let challengeCount = 3; // mock 值，对接后端时替换
+
+function initChallengeUI() {
+	const numEl    = document.getElementById('challenge-count-num');
+	const disabled = document.getElementById('btn-start-disabled');
+	const overlay  = document.getElementById('menu-overlay');
+
+	numEl.textContent = challengeCount;
+
+	if (challengeCount <= 0) {
+		// 次数为0：显示置灰按钮，遮住 Matter.js 的开始按钮
+		disabled.style.display = 'flex';
+	} else {
+		disabled.style.display = 'none';
+	}
+}
+
+function onBtnBack() {
+	// 菜单页（还没开始游戏）直接返回
+	if (Game.stateIndex === GameStates.MENU || Game.stateIndex === GameStates.LOSE) {
+		doBack();
+		return;
+	}
+	// 游戏进行中：暂停并弹确认框
+	runner.enabled = false;
+	document.getElementById('quit-modal').classList.add('show');
+}
+
+function doBack() {
+	// TODO: 对接小程序 navigateBack 或 postMessage
+	console.log('[Challenge] 返回小程序');
+	// wx.miniProgram.navigateBack();
+}
+
+document.getElementById('btn-back').addEventListener('click', onBtnBack);
+
+document.getElementById('quit-cancel').addEventListener('click', function () {
+	document.getElementById('quit-modal').classList.remove('show');
+	if (Game.stateIndex !== GameStates.LOSE) {
+		runner.enabled = true;
+	}
+});
+
+document.getElementById('quit-confirm').addEventListener('click', function () {
+	// 确认退出：以当前得分结算，走正常结束流程
+	document.getElementById('quit-modal').classList.remove('show');
+	Game.loseGame();
+});
+
+// 结束弹窗里的返回按钮
+document.getElementById('game-end-back-link').addEventListener('click', function(e) {
+	e.preventDefault();
+	doBack();
+});
+document.getElementById('game-end-back-link2').addEventListener('click', function(e) {
+	e.preventDefault();
+	doBack();
+});
+
 const GameStates = {
 	MENU: 0,
 	READY: 1,
@@ -246,12 +307,16 @@ const Game = {
 		ui: document.getElementById('game-ui'),
 		score: document.getElementById('top-score-value'),
 		end: document.getElementById('game-end-container'),
-		endTitle: document.getElementById('game-end-title'),
+		endScore: document.getElementById('game-end-score-value'),
+		endLink: document.getElementById('game-end-link'),
+		endHasChance: document.getElementById('game-end-has-chance'),
+		endNoChance: document.getElementById('game-end-no-chance'),
+		menuOverlay: document.getElementById('menu-overlay'),
 		nextFruitImg: document.getElementById('game-next-fruit'),
 		compendiumItems: document.querySelectorAll('.compendium-item'),
 		previewBall: null,
 	},
-	cache: { highscore: 0 },
+	cache: {},
 	sounds: {
 		click: new Audio('./assets/click.mp3'),
 		pop0: new Audio('./assets/pop0.mp3'),
@@ -308,33 +373,21 @@ const Game = {
 		Game.elements.nextFruitImg.src = `./assets/img/circle${Game.nextFruitSize}.png`;
 	},
 
-	loadHighscore: function () {
-		const gameCache = localStorage.getItem('suika-game-cache');
-		if (gameCache !== null) {
-			Game.cache = JSON.parse(gameCache);
-		}
-	},
-	saveHighscore: function () {
-		Game.calculateScore();
-		if (Game.score < Game.cache.highscore) return;
-
-		Game.cache.highscore = Game.score;
-		Game.elements.endTitle.innerText = '新纪录！';
-
-		localStorage.setItem('suika-game-cache', JSON.stringify(Game.cache));
-	},
-
 	initGame: function () {
 		Render.run(render);
 		Runner.run(runner, engine);
 
 		Composite.add(engine.world, menuStatics);
 
-		Game.loadHighscore();
 		Game.elements.ui.style.display = 'none';
 		Game.fruitsMerged = Array.apply(null, Array(Game.fruitSizes.length)).map(() => 0);
 
+		// 初始化挑战次数 UI
+		initChallengeUI();
+
 		const menuMouseDown = function () {
+			// 次数为0时，禁止开始
+			if (challengeCount <= 0) return;
 			if (mouseConstraint.body === null || mouseConstraint.body?.label !== 'btn-start') {
 				return;
 			}
@@ -349,13 +402,18 @@ const Game = {
 	startGame: function () {
 		Game.sounds.click.play();
 
+		// 消耗一次挑战次数
+		challengeCount = Math.max(0, challengeCount - 1);
+
+		// 隐藏菜单覆盖层
+		Game.elements.menuOverlay.style.display = 'none';
+
 		Composite.remove(engine.world, menuStatics);
 		Composite.add(engine.world, gameStatics);
 
 		Game.score = 0;
 		Game._comboBonus = 0;
 		Game.calculateScore();
-		Game.elements.endTitle.innerText = '游戏结束！';
 		Game.elements.ui.style.display = 'block';
 		Game.elements.end.style.display = 'none';
 		Game.elements.previewBall = Game.generateFruitBody(Game.width / 2, previewBallHeight, 1, { isStatic: true });
@@ -527,9 +585,21 @@ const Game = {
 			loseTimer = null;
 		}
 		Game.stateIndex = GameStates.LOSE;
+
+		// 弹窗显示本局得分
+		Game.elements.endScore.textContent = Game.score;
+
+		// 根据剩余次数决定显示内容
+		if (challengeCount > 0) {
+			Game.elements.endHasChance.style.display = 'flex';
+			Game.elements.endNoChance.style.display = 'none';
+		} else {
+			Game.elements.endHasChance.style.display = 'none';
+			Game.elements.endNoChance.style.display = 'block';
+		}
+
 		Game.elements.end.style.display = 'flex';
 		runner.enabled = false;
-		Game.saveHighscore();
 	},
 
 	generateFruitBody: function (x, y, sizeIndex, extraConfig = {}) {
@@ -700,8 +770,7 @@ const resizeCanvas = () => {
 	comboBanner.style.transformOrigin = 'center top';
 };
 
-// 防抖：窗口 resize 结束 100ms 后才执行，避免频繁触发
-let resizeTimer = null;
+// 防抖：窗口 resize 结束 100ms 后才执行，避免频繁触发let resizeTimer = null;
 window.addEventListener('resize', () => {
 	clearTimeout(resizeTimer);
 	resizeTimer = setTimeout(resizeCanvas, 100);
@@ -744,3 +813,52 @@ render.canvas.addEventListener('touchend', (e) => {
 		Game.addFruit(x);
 	}
 }, { passive: false });
+
+// ── 再来一局按钮（页面不刷新，直接重置状态重新开始）──────────
+document.getElementById('game-end-link').addEventListener('click', function(e) {
+	e.preventDefault();
+	if (challengeCount <= 0) return;
+
+	// 重置物理引擎
+	runner.enabled = true;
+	Composite.clear(engine.world, false);
+	Engine.clear(engine);
+
+	// 重置游戏状态
+	Game.stateIndex = GameStates.MENU;
+	Game.score = 0;
+	Game._comboBonus = 0;
+	Game.fruitsMerged = Array.apply(null, Array(Game.fruitSizes.length)).map(() => 0);
+	Game.currentFruitSize = 1;
+	Game.nextFruitSize = 1;
+	Game.elements.previewBall = null;
+	dropBall = null;
+	if (dropWatchTimer) { clearTimeout(dropWatchTimer); dropWatchTimer = null; }
+	if (loseTimer) { clearTimeout(loseTimer); loseTimer = null; }
+
+	// 重置图鉴
+	Game.elements.compendiumItems.forEach(el => el.classList.remove('unlocked'));
+
+	// 重置得分显示
+	Game.calculateScore();
+
+	// 关闭结束弹窗
+	Game.elements.end.style.display = 'none';
+
+	// 重新显示菜单覆盖层并更新次数
+	Game.elements.menuOverlay.style.display = '';
+	initChallengeUI();
+
+	// 重新加载菜单
+	Composite.add(engine.world, menuStatics);
+	Game.elements.ui.style.display = 'none';
+
+	// 重新绑定菜单点击
+	const menuMouseDown = function () {
+		if (challengeCount <= 0) return;
+		if (mouseConstraint.body === null || mouseConstraint.body?.label !== 'btn-start') return;
+		Events.off(mouseConstraint, 'mousedown', menuMouseDown);
+		Game.startGame();
+	};
+	Events.on(mouseConstraint, 'mousedown', menuMouseDown);
+});
