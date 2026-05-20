@@ -112,98 +112,6 @@ function spawnScoreText(x, y, points, isCombo = false) {
   });
 }
 
-// DOM 飞字：从画布内逻辑坐标飞向总分区（顶栏）
-// x/y 是 Matter.js 逻辑坐标（640×700空间）
-function spawnDomScoreText(logicX, logicY, text, color) {
-  const canvasEl = document.getElementById('game-canvas');
-  const rect = canvasEl.getBoundingClientRect();
-  // 将逻辑坐标换算成画布 CSS 像素
-  const scaleX = rect.width  / Game.width;
-  const scaleY = rect.height / Game.height;
-  const startX = rect.left + logicX * scaleX;
-  const startY = rect.top  + logicY * scaleY;
-
-  // 目标：顶部总分元素中心
-  const scoreEl = document.getElementById('top-score-value');
-  const scoreRect = scoreEl.getBoundingClientRect();
-  const endX = scoreRect.left + scoreRect.width  / 2;
-  const endY = scoreRect.top  + scoreRect.height / 2;
-
-  const el = document.createElement('div');
-  el.textContent = text;
-  el.style.cssText = [
-    'position:fixed',
-    `left:${startX}px`,
-    `top:${startY}px`,
-    `color:${color}`,
-    'font:900 32px "Azeret Mono",sans-serif',
-    'text-shadow:0 0 8px rgba(0,0,0,0.5)',
-    'pointer-events:none',
-    'z-index:9999',
-    'transform:translate(-50%,-50%)',
-    'transition:left 1.2s cubic-bezier(.2,.8,.4,1),top 1.2s cubic-bezier(.2,.8,.4,1)',
-    'will-change:left,top,opacity',
-  ].join(';');
-  document.body.appendChild(el);
-
-  // 第一段：飞向总分（1.2s，全程不透明）
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      el.style.left = `${endX}px`;
-      el.style.top  = `${endY}px`;
-    });
-  });
-
-  // 第二段：到达后停留 0.4s 再淡出
-  setTimeout(() => {
-    el.style.transition = 'opacity 0.4s ease';
-    el.style.opacity    = '0';
-  }, 1200 + 400);
-
-  setTimeout(() => el.remove(), 1200 + 400 + 450);
-}
-
-// 大合成专属飞字：DOM 实现，居中大字，停留后淡出
-function spawnBigMergeText(points, label) {
-  const canvasEl = document.getElementById('game-canvas');
-  const rect = canvasEl.getBoundingClientRect();
-  const centerX = rect.left + rect.width  / 2;
-  const centerY = rect.top  + rect.height / 2;
-
-  const el = document.createElement('div');
-  el.textContent = `+${points}`;
-  el.style.cssText = [
-    'position:fixed',
-    `left:${centerX}px`,
-    `top:${centerY - 60}px`,
-    'color:#ffd700',
-    'font:900 72px "Azeret Mono",sans-serif',
-    'text-shadow:0 0 20px #ff8800,0 0 40px #ff4400,3px 3px 0 rgba(0,0,0,0.4)',
-    'pointer-events:none',
-    'z-index:9999',
-    'transform:translate(-50%,-50%) scale(0.4)',
-    'opacity:0',
-    'transition:transform 0.25s cubic-bezier(.2,1.4,.4,1),opacity 0.2s ease',
-    'will-change:transform,opacity',
-  ].join(';');
-  document.body.appendChild(el);
-
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      el.style.transform = 'translate(-50%,-50%) scale(1)';
-      el.style.opacity = '1';
-    });
-  });
-
-  // 停留 1.5s 后淡出上飘
-  setTimeout(() => {
-    el.style.transition = 'transform 0.5s ease,opacity 0.5s ease';
-    el.style.transform  = 'translate(-50%,-150%) scale(0.8)';
-    el.style.opacity    = '0';
-    setTimeout(() => el.remove(), 550);
-  }, 1500);
-}
-
 // ── 大合成特效（合成出 circle8/9/10 时触发）──────────────────
 const BIG_MERGE_LEVELS = {
   8:  { label: 'GOOD！',    color: '#ff9900', shadow: '#ff5500', bonus: 50  },
@@ -259,48 +167,35 @@ function triggerBigMerge(sizeIndex, fruitImg) {
   }, 3500);
 }
 
-// ── 连击系统（时间窗口制）────────────────────────────────────
-// 定义：任意合并发生后 1.2s 内再次发生合并即为连击，超时重置。
-// 从 2× 开始显示横幅。
+// ── 连击系统 ────────────────────────────────────────────────
+// 连击定义：同一颗投下球引发的连锁合成次数（用 dropId 追踪归属）。
+// 每次新投球时产生新 dropId，合成出的子球继承父球的 dropId。
+// 相同 dropId 的合成才计连击，跨球不累积。
 const COMBO_BONUS_BASE = 5; // 连击每层固定奖励分
-const COMBO_WINDOW_MS  = 1200; // 时间窗口
-let comboCount    = 0;       // 当前连击次数
-let comboTimer    = null;    // 窗口定时器
+
+// 每个 dropId 独立维护一个 comboCount
+const comboMap = new Map(); // dropId -> count
+
+let currentDropId = 0; // 单调递增，每次 addFruit +1
 
 const comboBanner = document.getElementById('combo-banner');
 
-function triggerCombo(x, y) {
-  // 有待过期的定时器，先清除（延续窗口）
-  if (comboTimer !== null) {
-    clearTimeout(comboTimer);
-    comboTimer = null;
-  }
+function triggerCombo(dropId, x, y) {
+  const count = (comboMap.get(dropId) || 0) + 1;
+  comboMap.set(dropId, count);
 
-  comboCount += 1;
-
-  if (comboCount >= 2) {
-    const bonus = COMBO_BONUS_BASE * (comboCount - 1);
+  if (count >= 2) {
+    const bonus = COMBO_BONUS_BASE * (count - 1);
     Game._comboBonus = (Game._comboBonus || 0) + bonus;
 
-    comboBanner.textContent = `${comboCount}× 连击！`;
+    comboBanner.textContent = `${count}× 连击！`;
     comboBanner.classList.remove('show');
     void comboBanner.offsetWidth;
     comboBanner.classList.add('show');
 
-    spawnDomScoreText(x, y, `+${bonus}`, '#ffdd00');
+    spawnScoreText(x, y - 30, bonus, true);
     Game.calculateScore();
   }
-
-  // 窗口到期则重置
-  comboTimer = setTimeout(() => {
-    comboCount = 0;
-    comboTimer = null;
-  }, COMBO_WINDOW_MS);
-}
-
-function resetCombo() {
-  if (comboTimer !== null) { clearTimeout(comboTimer); comboTimer = null; }
-  comboCount = 0;
 }
 
 // ── 投放冷却：等球首次碰撞才允许投下一颗 ──────────────────
@@ -446,7 +341,7 @@ const Game = {
 		const score = Game.fruitsMerged.reduce((total, count, sizeIndex) => {
 			const value = Game.fruitSizes[sizeIndex].scoreValue * count;
 			return total + value;
-		}, 0) + (Game._comboBonus || 0) + (Game._bigMergeBonus || 0);
+		}, 0) + (Game._comboBonus || 0);
 
 		Game.score = score;
 		Game.elements.score.innerText = Game.score;
@@ -519,8 +414,6 @@ const Game = {
 
 		Game.score = 0;
 		Game._comboBonus = 0;
-		Game._bigMergeBonus = 0;
-		resetCombo();
 		Game.calculateScore();
 		Game.elements.ui.style.display = 'block';
 		Game.elements.end.classList.remove('show');
@@ -562,6 +455,10 @@ const Game = {
 				}
 			}
 
+			// 本帧按 dropId 分组，每个 dropId 最多触发一次连击计数
+			const mergedDropIds = new Set();
+			let firstMergeX = 0, firstMergeY = 0, firstMerged = false;
+
 			for (let i = 0; i < e.pairs.length; i++) {
 				const { bodyA, bodyB } = e.pairs[i];
 
@@ -585,7 +482,10 @@ const Game = {
 				sound.play();
 				Composite.remove(engine.world, [bodyA, bodyB]);
 
+				// 合成球继承父球的 dropId（优先用有 dropId 的那个）
+				const inheritedDropId = bodyA.dropId ?? bodyB.dropId ?? 0;
 				const newFruit = Game.generateFruitBody(midPosX, midPosY, newSize);
+				newFruit.dropId = inheritedDropId;
 				Composite.add(engine.world, newFruit);
 
 				Game.addPop(midPosX, midPosY, bodyA.circleRadius);
@@ -599,11 +499,11 @@ const Game = {
 				// 大合成特效：合成出 circle8→GOOD，circle9→GREAT，circle10→AMAZING
 				triggerBigMerge(newSize, Game.fruitSizes[newSize].img);
 
-				// 大合成额外加分（写入独立字段，专属大飞字）
+				// 大合成额外加分
 				const bigMergeCfg = BIG_MERGE_LEVELS[newSize];
 				if (bigMergeCfg) {
-					Game._bigMergeBonus = (Game._bigMergeBonus || 0) + bigMergeCfg.bonus;
-					spawnBigMergeText(bigMergeCfg.bonus, bigMergeCfg.label);
+					Game._comboBonus = (Game._comboBonus || 0) + bigMergeCfg.bonus;
+					spawnScoreText(midPosX, midPosY - 60, bigMergeCfg.bonus, true);
 				}
 
 				Game.fruitsMerged[bodyA.sizeIndex] += 1;
@@ -611,8 +511,20 @@ const Game = {
 				Game.unlockCompendium(bodyA.sizeIndex);
 				Game.unlockCompendium(newSize);
 
-				// 每次合并直接触发连击时间窗口
-				triggerCombo(midPosX, midPosY);
+				// 记录每个 dropId 本帧首次合成位置
+				if (inheritedDropId && !mergedDropIds.has(inheritedDropId)) {
+					mergedDropIds.add(inheritedDropId);
+					if (!firstMerged) {
+						firstMergeX = midPosX;
+						firstMergeY = midPosY;
+						firstMerged = true;
+					}
+				}
+			}
+
+			// 每个 dropId 各自触发一次连击计数
+			for (const dropId of mergedDropIds) {
+				triggerCombo(dropId, firstMergeX, firstMergeY);
 			}
 		});
 
@@ -724,6 +636,7 @@ const Game = {
 		Game.stateIndex = GameStates.DROP;
 		const latestFruit = Game.generateFruitBody(clampedX, previewBallHeight, Game.currentFruitSize);
 		latestFruit.birthTime = Date.now(); // 只有从顶部投下的球才有出生保护
+		latestFruit.dropId = ++currentDropId; // 归属批次，用于连击追踪
 		Composite.add(engine.world, latestFruit);
 
 		// 投放时点亮图鉴（首次出现即解锁）
@@ -923,8 +836,6 @@ document.getElementById('game-end-link').addEventListener('click', function(e) {
 	Game.stateIndex = GameStates.MENU;
 	Game.score = 0;
 	Game._comboBonus = 0;
-	Game._bigMergeBonus = 0;
-	resetCombo();
 	Game.fruitsMerged = Array.apply(null, Array(Game.fruitSizes.length)).map(() => 0);
 	Game.currentFruitSize = 1;
 	Game.nextFruitSize = 1;
