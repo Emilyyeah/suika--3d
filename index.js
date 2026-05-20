@@ -415,7 +415,7 @@ const Game = {
 		Game._comboBonus = 0;
 		Game.calculateScore();
 		Game.elements.ui.style.display = 'block';
-		Game.elements.end.style.display = 'none';
+		Game.elements.end.classList.remove('show');
 		Game.elements.previewBall = Game.generateFruitBody(Game.width / 2, previewBallHeight, 1, { isStatic: true });
 		Composite.add(engine.world, Game.elements.previewBall);
 		Game.unlockCompendium(1);
@@ -598,7 +598,7 @@ const Game = {
 			Game.elements.endNoChance.style.display = 'block';
 		}
 
-		Game.elements.end.style.display = 'flex';
+		Game.elements.end.classList.add('show');
 		runner.enabled = false;
 	},
 
@@ -843,7 +843,7 @@ document.getElementById('game-end-link').addEventListener('click', function(e) {
 	Game.calculateScore();
 
 	// 关闭结束弹窗
-	Game.elements.end.style.display = 'none';
+	Game.elements.end.classList.remove('show');
 
 	// 重新显示菜单覆盖层并更新次数
 	Game.elements.menuOverlay.style.display = '';
