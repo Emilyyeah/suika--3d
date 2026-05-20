@@ -285,19 +285,18 @@ let comboTimer    = null;    // 窗口定时器
 const comboBanner = document.getElementById('combo-banner');
 
 function triggerCombo(x, y) {
-  // 有待过期的定时器，先清除（延续窗口）
+  // 已封顶：不刷新窗口，让定时器自然到期重置，本次合并静默忽略
+  if (comboCount >= COMBO_MAX) return;
+
+  // 延续窗口
   if (comboTimer !== null) {
     clearTimeout(comboTimer);
     comboTimer = null;
   }
 
-  // 封顶后不再累加连击次数，但继续刷新窗口
-  if (comboCount < COMBO_MAX) {
-    comboCount += 1;
-  }
+  comboCount += 1;
 
   if (comboCount >= 2) {
-    // 10× 封顶后显示 MAX，不再加分
     const isCapped = comboCount >= COMBO_MAX;
     const bonus    = isCapped ? 0 : COMBO_BONUS_BASE * (comboCount - 1);
 
@@ -313,7 +312,7 @@ function triggerCombo(x, y) {
     comboBanner.classList.add('show');
   }
 
-  // 窗口到期则重置
+  // 窗口到期则重置，开启新一轮
   comboTimer = setTimeout(() => {
     comboCount = 0;
     comboTimer = null;
