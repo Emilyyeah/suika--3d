@@ -274,10 +274,11 @@ function triggerBigMerge(sizeIndex, fruitImg) {
 }
 
 // ── 连击系统（时间窗口制）────────────────────────────────────
-// 定义：任意合并发生后 1.2s 内再次发生合并即为连击，超时重置。
-// 从 2× 开始显示横幅。
+// 定义：任意合并发生后 2s 内再次发生合并即为连击，超时重置。
+// 从 2× 开始显示横幅，最高封顶 10×，10× 后不再加分。
 const COMBO_BONUS_BASE = 5; // 连击每层固定奖励分
-const COMBO_WINDOW_MS  = 3000; // 时间窗口（需覆盖投球→落地→合并的完整周期）
+const COMBO_WINDOW_MS  = 2000; // 时间窗口
+const COMBO_MAX        = 10;   // 连击封顶
 let comboCount    = 0;       // 当前连击次数
 let comboTimer    = null;    // 窗口定时器
 
@@ -290,19 +291,26 @@ function triggerCombo(x, y) {
     comboTimer = null;
   }
 
-  comboCount += 1;
+  // 封顶后不再累加连击次数，但继续刷新窗口
+  if (comboCount < COMBO_MAX) {
+    comboCount += 1;
+  }
 
   if (comboCount >= 2) {
-    const bonus = COMBO_BONUS_BASE * (comboCount - 1);
-    Game._comboBonus = (Game._comboBonus || 0) + bonus;
+    // 10× 封顶后显示 MAX，不再加分
+    const isCapped = comboCount >= COMBO_MAX;
+    const bonus    = isCapped ? 0 : COMBO_BONUS_BASE * (comboCount - 1);
 
-    comboBanner.textContent = `${comboCount}× 连击！`;
+    if (bonus > 0) {
+      Game._comboBonus = (Game._comboBonus || 0) + bonus;
+      spawnDomScoreText(x, y, `+${bonus}`, '#ffdd00');
+      Game.calculateScore();
+    }
+
+    comboBanner.textContent = isCapped ? `${COMBO_MAX}× MAX！` : `${comboCount}× 连击！`;
     comboBanner.classList.remove('show');
     void comboBanner.offsetWidth;
     comboBanner.classList.add('show');
-
-    spawnDomScoreText(x, y, `+${bonus}`, '#ffdd00');
-    Game.calculateScore();
   }
 
   // 窗口到期则重置
