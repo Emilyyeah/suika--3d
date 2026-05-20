@@ -163,19 +163,24 @@ function spawnDomScoreText(logicX, logicY, text, color) {
   setTimeout(() => el.remove(), 1200 + 400 + 450);
 }
 
-// 大合成专属飞字：DOM 实现，居中大字，停留后淡出
+// 大合成专属飞字：居中弹出大字，停留 1s 后飞向总分
 function spawnBigMergeText(points, label) {
   const canvasEl = document.getElementById('game-canvas');
   const rect = canvasEl.getBoundingClientRect();
   const centerX = rect.left + rect.width  / 2;
-  const centerY = rect.top  + rect.height / 2;
+  const centerY = rect.top  + rect.height * 0.45;
+
+  const scoreEl = document.getElementById('top-score-value');
+  const scoreRect = scoreEl.getBoundingClientRect();
+  const endX = scoreRect.left + scoreRect.width  / 2;
+  const endY = scoreRect.top  + scoreRect.height / 2;
 
   const el = document.createElement('div');
   el.textContent = `+${points}`;
   el.style.cssText = [
     'position:fixed',
     `left:${centerX}px`,
-    `top:${centerY - 60}px`,
+    `top:${centerY}px`,
     'color:#ffd700',
     'font:900 72px "Azeret Mono",sans-serif',
     'text-shadow:0 0 20px #ff8800,0 0 40px #ff4400,3px 3px 0 rgba(0,0,0,0.4)',
@@ -183,25 +188,34 @@ function spawnBigMergeText(points, label) {
     'z-index:9999',
     'transform:translate(-50%,-50%) scale(0.4)',
     'opacity:0',
-    'transition:transform 0.25s cubic-bezier(.2,1.4,.4,1),opacity 0.2s ease',
-    'will-change:transform,opacity',
+    'transition:transform 0.3s cubic-bezier(.2,1.4,.4,1),opacity 0.25s ease',
+    'will-change:transform,opacity,left,top',
   ].join(';');
   document.body.appendChild(el);
 
+  // 第一段：弹出放大
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       el.style.transform = 'translate(-50%,-50%) scale(1)';
-      el.style.opacity = '1';
+      el.style.opacity   = '1';
     });
   });
 
-  // 停留 1.5s 后淡出上飘
+  // 第二段：停留 1s 后缩小飞向总分
   setTimeout(() => {
-    el.style.transition = 'transform 0.5s ease,opacity 0.5s ease';
-    el.style.transform  = 'translate(-50%,-150%) scale(0.8)';
-    el.style.opacity    = '0';
-    setTimeout(() => el.remove(), 550);
-  }, 1500);
+    el.style.transition = [
+      'left 1.0s cubic-bezier(.2,.8,.4,1)',
+      'top 1.0s cubic-bezier(.2,.8,.4,1)',
+      'transform 1.0s ease',
+      'opacity 0.4s ease 0.6s',
+    ].join(',');
+    el.style.left      = `${endX}px`;
+    el.style.top       = `${endY}px`;
+    el.style.transform = 'translate(-50%,-50%) scale(0.5)';
+    el.style.opacity   = '0';
+  }, 1000);
+
+  setTimeout(() => el.remove(), 1000 + 1100);
 }
 
 // ── 大合成特效（合成出 circle8/9/10 时触发）──────────────────
@@ -263,7 +277,7 @@ function triggerBigMerge(sizeIndex, fruitImg) {
 // 定义：任意合并发生后 1.2s 内再次发生合并即为连击，超时重置。
 // 从 2× 开始显示横幅。
 const COMBO_BONUS_BASE = 5; // 连击每层固定奖励分
-const COMBO_WINDOW_MS  = 1200; // 时间窗口
+const COMBO_WINDOW_MS  = 3000; // 时间窗口（需覆盖投球→落地→合并的完整周期）
 let comboCount    = 0;       // 当前连击次数
 let comboTimer    = null;    // 窗口定时器
 
