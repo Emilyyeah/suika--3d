@@ -303,8 +303,8 @@ const Game = {
 	currentFruitSize: 1,
 	nextFruitSize: 1,
 	setNextFruitSize: function () {
-		// 随机掉落 circle1~5
-		Game.nextFruitSize = 1 + Math.floor(rand() * 5);
+		// 随机掉落 circle1~4
+		Game.nextFruitSize = 1 + Math.floor(rand() * 4);
 		Game.elements.nextFruitImg.src = `./assets/img/circle${Game.nextFruitSize}.png`;
 	},
 
