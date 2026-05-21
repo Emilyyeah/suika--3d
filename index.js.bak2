@@ -1,119 +1,3 @@
-// ══════════════════════════════════════════════════════════════════
-// ── API 对接模块 ─────────────────────────────────────────────────
-// ══════════════════════════════════════════════════════════════════
-
-const API_URL = 'http://sdk-api.37.com.cn/api/gaia-trigger-proxy/v1/challenge_service/finish_challenge';
-const SIGN_KEY = 'Jp*4Y8vQOYck2*&Z';
-
-// ── 解析 URL 参数（小程序跳转时携带） ──
-function getUrlParams() {
-	const params = {};
-	const search = window.location.search.substring(1);
-	if (!search) return params;
-	search.split('&').forEach(function (pair) {
-		const idx = pair.indexOf('=');
-		if (idx > 0) {
-			const key = decodeURIComponent(pair.substring(0, idx));
-			const val = decodeURIComponent(pair.substring(idx + 1));
-			params[key] = val;
-		}
-	});
-	return params;
-}
-
-const urlParams = getUrlParams();
-
-// 从 URL 读取小程序传入的固定参数
-const LaunchParams = {
-	act_config_id: urlParams.act_config_id || '',
-	token:         urlParams.token || '',
-	pid:           parseInt(urlParams.pid) || 0,
-	gid:           parseInt(urlParams.gid) || 0,
-	dsid:          urlParams.dsid || '',
-	drid:          urlParams.drid || '',
-	dsname:        urlParams.dsname || '',
-	drname:        urlParams.drname || '',
-	minigame_score:    parseInt(urlParams.minigame_score) || 0,
-	challenge_count:   'challenge_count' in urlParams ? parseInt(urlParams.challenge_count) : 3,
-	revive_item_count: parseInt(urlParams.revive_item_count) || 0,
-	double_item_count: parseInt(urlParams.double_item_count) || 0,
-};
-
-// ── 唯一业务流水号生成 ──
-// 格式: GAME + YYYYMMDD + HHMMSSmmm + 5位随机数
-let _bizSeq = 0;
-function generateBizNo() {
-	const now = new Date();
-	const pad2 = (n) => String(n).padStart(2, '0');
-	const pad3 = (n) => String(n).padStart(3, '0');
-	const date = '' + now.getFullYear() + pad2(now.getMonth() + 1) + pad2(now.getDate());
-	const time = pad2(now.getHours()) + pad2(now.getMinutes()) + pad2(now.getSeconds()) + pad3(now.getMilliseconds());
-	const seq   = String(++_bizSeq).padStart(3, '0');
-	const rnd   = String(Math.floor(Math.random() * 100)).padStart(2, '0');
-	return 'GAME' + date + time + seq + rnd;
-}
-
-// ── 签名：字典序拼接 + 末尾追加 key + MD5 ──
-function makeSign(params) {
-	const keys = Object.keys(params).filter(k => k !== 'sign').sort();
-	let raw = '';
-	for (const k of keys) {
-		const v = params[k] === null || params[k] === undefined ? '' : params[k];
-		raw += k + '=' + v;
-	}
-	raw += SIGN_KEY;
-	return md5(raw); // blueimp-md5 全局函数，返回小写
-}
-
-// ── 结算防重入：每局递增，回调中校验是否仍是当前局 ──
-let _settleId = 0;
-
-// ── 调用结算接口 ──
-async function callFinishChallenge(score) {
-	const timestamp = Math.floor(Date.now() / 1000);
-	const biz_no = generateBizNo();
-
-	const params = {
-		act_config_id:             LaunchParams.act_config_id,
-		token:                     LaunchParams.token,
-		pid:                       LaunchParams.pid,
-		gid:                       LaunchParams.gid,
-		dsid:                      LaunchParams.dsid,
-		drid:                      LaunchParams.drid,
-		dsname:                    LaunchParams.dsname,
-		drname:                    LaunchParams.drname,
-		biz_no:                    biz_no,
-		score:                     score,
-		timestamp:                 timestamp,
-		version:                   'v3',
-		consume_revive_item_count: 0,
-		consume_double_item_count: 0,
-	};
-
-	params.sign = makeSign(params);
-
-	console.log('[API] callFinishChallenge params:', params);
-
-	const resp = await fetch(API_URL, {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify(params),
-	});
-
-	if (!resp.ok) {
-		throw new Error('HTTP ' + resp.status);
-	}
-
-	const json = await resp.json();
-	console.log('[API] callFinishChallenge response:', json);
-
-	if (json.state !== 0) {
-		throw new Error(json.message || 'API error state=' + json.state);
-	}
-
-	return json.data;
-}
-
 // const Matter = require('matter-js');
 
 function mulberry32(a) {
@@ -474,8 +358,9 @@ const friction = {
 	restitution: 0.1
 };
 
-// ── 挑战次数（从 URL 参数读取）──────────────────────────────────
-let challengeCount = LaunchParams.challenge_count;
+// ── 挑战次数 ──────────────────────────────────────────────────
+// TODO: 后续替换为 API 获取真实次数
+let challengeCount = 3; // mock 值，对接后端时替换
 
 function initChallengeUI() {
 	const numEl    = document.getElementById('challenge-count-num');
@@ -504,13 +389,9 @@ function onBtnBack() {
 }
 
 function doBack() {
+	// TODO: 对接小程序 navigateBack 或 postMessage
 	console.log('[Challenge] 返回小程序');
-	if (window.wx && wx.miniProgram) {
-		wx.miniProgram.navigateBack();
-	} else {
-		// 非小程序环境（调试用）：尝试关闭窗口或回退历史
-		window.history.back();
-	}
+	// wx.miniProgram.navigateBack();
 }
 
 document.getElementById('btn-back').addEventListener('click', onBtnBack);
@@ -536,15 +417,6 @@ document.getElementById('game-end-back-link').addEventListener('click', function
 document.getElementById('game-end-back-link2').addEventListener('click', function(e) {
 	e.preventDefault();
 	doBack();
-});
-document.getElementById('game-end-back-link3').addEventListener('click', function(e) {
-	e.preventDefault();
-	doBack();
-});
-// 结算失败弹窗的"再来一局"按钮：复用已有的再来一局逻辑
-document.getElementById('game-end-retry-link').addEventListener('click', function(e) {
-	e.preventDefault();
-	document.getElementById('game-end-link').click();
 });
 
 const GameStates = {
@@ -657,8 +529,8 @@ const Game = {
 	startGame: function () {
 		Game.sounds.click.play();
 
-		// 挑战次数由结算接口返回值更新，此处不再客户端扣减
-		// challengeCount 会在 loseGame → callFinishChallenge 回调中更新
+		// 消耗一次挑战次数
+		challengeCount = Math.max(0, challengeCount - 1);
 
 		// 隐藏菜单覆盖层
 		Game.elements.menuOverlay.style.display = 'none';
@@ -681,6 +553,127 @@ const Game = {
 			Game.stateIndex = GameStates.READY;
 		}, 250);
 
+		Events.on(mouseConstraint, 'mouseup', function (e) {
+			Game.addFruit(e.mouse.position.x);
+		});
+
+		Events.on(mouseConstraint, 'mousemove', function (e) {
+			if (Game.stateIndex !== GameStates.READY) return;
+			if (Game.elements.previewBall === null) return;
+
+			const r = Game.fruitSizes[Game.currentFruitSize].radius;
+			const clampedX = Math.max(r, Math.min(Game.width - r, e.mouse.position.x));
+			Body.setPosition(Game.elements.previewBall, {
+				x: clampedX,
+				y: previewBallHeight,
+			});
+		});
+
+		Events.on(engine, 'collisionStart', function (e) {
+			// 已结束则忽略所有碰撞
+			if (Game.stateIndex === GameStates.LOSE) return;
+
+			// ── 检测投出球是否首次碰撞（落地）→ 解锁下一次投球 ──
+			if (dropBall !== null && Game.stateIndex === GameStates.DROP) {
+				for (const pair of e.pairs) {
+					if (pair.bodyA === dropBall || pair.bodyB === dropBall) {
+						unlockNextDrop();
+						break;
+					}
+				}
+			}
+
+			for (let i = 0; i < e.pairs.length; i++) {
+				const { bodyA, bodyB } = e.pairs[i];
+
+				if (bodyA.isStatic || bodyB.isStatic) continue;
+				if (bodyA.sizeIndex !== bodyB.sizeIndex) continue;
+				if (bodyA.popped || bodyB.popped) continue;
+
+				let newSize = bodyA.sizeIndex + 1;
+				if (bodyA.circleRadius >= Game.fruitSizes[Game.fruitSizes.length - 1].radius) {
+					newSize = 1;
+				}
+
+				const midPosX = (bodyA.position.x + bodyB.position.x) / 2;
+				const midPosY = (bodyA.position.y + bodyB.position.y) / 2;
+
+				bodyA.popped = true;
+				bodyB.popped = true;
+
+				const sound = Game.sounds[`pop${bodyA.sizeIndex}`];
+				sound.currentTime = 0;
+				sound.play();
+				Composite.remove(engine.world, [bodyA, bodyB]);
+
+				const newFruit = Game.generateFruitBody(midPosX, midPosY, newSize);
+				Composite.add(engine.world, newFruit);
+
+				Game.addPop(midPosX, midPosY, bodyA.circleRadius);
+
+				const particleCount = 12 + bodyA.sizeIndex * 3;
+				spawnParticles(midPosX, midPosY, bodyA.circleRadius, particleCount);
+
+				const mergePoints = Game.fruitSizes[bodyA.sizeIndex].scoreValue;
+				spawnScoreText(midPosX, midPosY, mergePoints);
+
+				// 大合成特效：合成出 circle8→GOOD，circle9→GREAT，circle10→AMAZING
+				triggerBigMerge(newSize, Game.fruitSizes[newSize].img);
+
+				// 大合成额外加分（写入独立字段，专属大飞字）
+				const bigMergeCfg = BIG_MERGE_LEVELS[newSize];
+				if (bigMergeCfg) {
+					Game._bigMergeBonus = (Game._bigMergeBonus || 0) + bigMergeCfg.bonus;
+					spawnBigMergeText(bigMergeCfg.bonus, bigMergeCfg.label);
+				}
+
+				Game.fruitsMerged[bodyA.sizeIndex] += 1;
+				Game.calculateScore();
+				Game.unlockCompendium(bodyA.sizeIndex);
+				Game.unlockCompendium(newSize);
+
+				// 每次合并直接触发连击时间窗口
+				triggerCombo(midPosX, midPosY);
+			}
+		});
+
+		// ── 每物理帧扫描所有球，只要有球顶部持续在死亡线以上就判负 ──
+		// collisionStart 只在新碰撞时触发，球静止堆在线上不会再触发，
+		// 必须用 afterUpdate 做持续检测。
+		Events.on(engine, 'afterUpdate', function () {
+			if (Game.stateIndex === GameStates.LOSE) return;
+
+			const bodies = Composite.allBodies(engine.world);
+			let overLine = false;
+
+			for (const body of bodies) {
+				if (body.isStatic) continue;
+				// 刚投放的球（出生 < 1000ms）从顶部落下，跳过避免误判
+				if (body.birthTime && Date.now() - body.birthTime < 1000) continue;
+				// 球的顶部超过死亡线（注意：y 向下，顶部 = y - radius）
+				if (body.position.y - body.circleRadius < loseHeight) {
+					overLine = true;
+					break;
+				}
+			}
+
+			if (overLine) {
+				if (loseTimer === null) {
+					// 首次越线：启动 500ms 容错计时（防止弹起瞬间误判）
+					loseTimer = setTimeout(() => {
+						if (Game.stateIndex !== GameStates.LOSE) {
+							Game.loseGame();
+						}
+					}, LOSE_GRACE_MS);
+				}
+			} else {
+				// 这帧没有任何球越线，取消计时器
+				if (loseTimer !== null) {
+					clearTimeout(loseTimer);
+					loseTimer = null;
+				}
+			}
+		});
 	},
 
 	addPop: function (x, y, r) {
@@ -709,65 +702,21 @@ const Game = {
 			loseTimer = null;
 		}
 		Game.stateIndex = GameStates.LOSE;
-		runner.enabled = false;
 
-		// 弹窗：先显示本轮得分 + "结算中..."
+		// 弹窗显示本局得分
 		Game.elements.endScore.textContent = Game.score;
 
-		const settlingEl = document.getElementById('game-end-settling');
-		const totalWrap  = document.getElementById('game-end-total-wrap');
-		const totalValue = document.getElementById('game-end-total-value');
+		// 根据剩余次数决定显示内容
+		if (challengeCount > 0) {
+			Game.elements.endHasChance.style.display = 'flex';
+			Game.elements.endNoChance.style.display = 'none';
+		} else {
+			Game.elements.endHasChance.style.display = 'none';
+			Game.elements.endNoChance.style.display = 'block';
+		}
 
-		settlingEl.style.display = 'block';
-		settlingEl.textContent   = '结算中...';
-		totalWrap.style.display  = 'none';
-		Game.elements.endHasChance.style.display = 'none';
-		Game.elements.endNoChance.style.display  = 'none';
-		document.getElementById('game-end-error').style.display = 'none';
 		Game.elements.end.classList.add('show');
-
-		// 调用结算接口
-		const thisSettle = ++_settleId;
-		callFinishChallenge(Game.score)
-			.then(function (data) {
-				// 防重入：如果已经开始新一局，丢弃过期回调
-				if (thisSettle !== _settleId) return;
-
-				// 用接口返回值更新 UI
-				challengeCount = data.remain_challenge_count;
-
-				// 累计积分 = actual_score + 初始积分
-				const totalScore = data.actual_score + LaunchParams.minigame_score;
-				totalValue.textContent = totalScore;
-				totalWrap.style.display = '';
-
-				settlingEl.style.display = 'none';
-
-				// 更新累计初始积分（多局场景下保持准确）
-				LaunchParams.minigame_score = totalScore;
-
-				// 刷新顶栏剩余次数
-				initChallengeUI();
-
-				// 根据剩余次数决定按钮
-				if (challengeCount > 0) {
-					Game.elements.endHasChance.style.display = 'flex';
-					Game.elements.endNoChance.style.display  = 'none';
-				} else {
-					Game.elements.endHasChance.style.display = 'none';
-					Game.elements.endNoChance.style.display  = 'block';
-				}
-			})
-			.catch(function (err) {
-				if (thisSettle !== _settleId) return;
-				console.error('[API] 结算失败:', err);
-				settlingEl.textContent = '结算失败，请返回重试';
-
-				// 结算失败：只显示返回按钮，不显示"次数已用完"
-				Game.elements.endHasChance.style.display = 'none';
-				Game.elements.endNoChance.style.display  = 'none';
-				document.getElementById('game-end-error').style.display = 'block';
-			});
+		runner.enabled = false;
 	},
 
 	generateFruitBody: function (x, y, sizeIndex, extraConfig = {}) {
@@ -893,123 +842,6 @@ render.mouse = mouse;
 
 Game.initGame();
 
-// ── 全局事件注册（只注册一次，用状态守卫控制行为）──────────────
-Events.on(mouseConstraint, 'mouseup', function (e) {
-	Game.addFruit(e.mouse.position.x);
-});
-
-Events.on(mouseConstraint, 'mousemove', function (e) {
-	if (Game.stateIndex !== GameStates.READY) return;
-	if (Game.elements.previewBall === null) return;
-
-	const r = Game.fruitSizes[Game.currentFruitSize].radius;
-	const clampedX = Math.max(r, Math.min(Game.width - r, e.mouse.position.x));
-	Body.setPosition(Game.elements.previewBall, {
-		x: clampedX,
-		y: previewBallHeight,
-	});
-});
-
-Events.on(engine, 'collisionStart', function (e) {
-	// 已结束或菜单阶段忽略
-	if (Game.stateIndex === GameStates.LOSE || Game.stateIndex === GameStates.MENU) return;
-
-	// ── 检测投出球是否首次碰撞（落地）→ 解锁下一次投球 ──
-	if (dropBall !== null && Game.stateIndex === GameStates.DROP) {
-		for (const pair of e.pairs) {
-			if (pair.bodyA === dropBall || pair.bodyB === dropBall) {
-				unlockNextDrop();
-				break;
-			}
-		}
-	}
-
-	for (let i = 0; i < e.pairs.length; i++) {
-		const { bodyA, bodyB } = e.pairs[i];
-
-		if (bodyA.isStatic || bodyB.isStatic) continue;
-		if (bodyA.sizeIndex !== bodyB.sizeIndex) continue;
-		if (bodyA.popped || bodyB.popped) continue;
-
-		let newSize = bodyA.sizeIndex + 1;
-		if (bodyA.circleRadius >= Game.fruitSizes[Game.fruitSizes.length - 1].radius) {
-			newSize = 1;
-		}
-
-		const midPosX = (bodyA.position.x + bodyB.position.x) / 2;
-		const midPosY = (bodyA.position.y + bodyB.position.y) / 2;
-
-		bodyA.popped = true;
-		bodyB.popped = true;
-
-		const sound = Game.sounds[`pop${bodyA.sizeIndex}`];
-		sound.currentTime = 0;
-		sound.play();
-		Composite.remove(engine.world, [bodyA, bodyB]);
-
-		const newFruit = Game.generateFruitBody(midPosX, midPosY, newSize);
-		Composite.add(engine.world, newFruit);
-
-		Game.addPop(midPosX, midPosY, bodyA.circleRadius);
-
-		const particleCount = 12 + bodyA.sizeIndex * 3;
-		spawnParticles(midPosX, midPosY, bodyA.circleRadius, particleCount);
-
-		const mergePoints = Game.fruitSizes[bodyA.sizeIndex].scoreValue;
-		spawnScoreText(midPosX, midPosY, mergePoints);
-
-		// 大合成特效：合成出 circle8→GOOD，circle9→GREAT，circle10→AMAZING
-		triggerBigMerge(newSize, Game.fruitSizes[newSize].img);
-
-		// 大合成额外加分（写入独立字段，专属大飞字）
-		const bigMergeCfg = BIG_MERGE_LEVELS[newSize];
-		if (bigMergeCfg) {
-			Game._bigMergeBonus = (Game._bigMergeBonus || 0) + bigMergeCfg.bonus;
-			spawnBigMergeText(bigMergeCfg.bonus, bigMergeCfg.label);
-		}
-
-		Game.fruitsMerged[bodyA.sizeIndex] += 1;
-		Game.calculateScore();
-		Game.unlockCompendium(bodyA.sizeIndex);
-		Game.unlockCompendium(newSize);
-
-		// 每次合并直接触发连击时间窗口
-		triggerCombo(midPosX, midPosY);
-	}
-});
-
-// ── 每物理帧扫描所有球，持续在死亡线以上就判负 ──
-Events.on(engine, 'afterUpdate', function () {
-	if (Game.stateIndex === GameStates.LOSE || Game.stateIndex === GameStates.MENU) return;
-
-	const bodies = Composite.allBodies(engine.world);
-	let overLine = false;
-
-	for (const body of bodies) {
-		if (body.isStatic) continue;
-		if (body.birthTime && Date.now() - body.birthTime < 1000) continue;
-		if (body.position.y - body.circleRadius < loseHeight) {
-			overLine = true;
-			break;
-		}
-	}
-
-	if (overLine) {
-		if (loseTimer === null) {
-			loseTimer = setTimeout(() => {
-				if (Game.stateIndex !== GameStates.LOSE) {
-					Game.loseGame();
-				}
-			}, LOSE_GRACE_MS);
-		}
-	} else {
-		if (loseTimer !== null) {
-			clearTimeout(loseTimer);
-			loseTimer = null;
-		}
-	}
-});
-
 const resizeCanvas = () => {
 	// 可用区域：#game-canvas-wrap 的实际尺寸
 	const wrap = document.getElementById('game-canvas-wrap');
@@ -1098,7 +930,7 @@ render.canvas.addEventListener('touchend', (e) => {
 	}
 }, { passive: false });
 
-// ── 再来一局按钮（跳过菜单，直接开始新一局）──────────────────
+// ── 再来一局按钮（页面不刷新，直接重置状态重新开始）──────────
 document.getElementById('game-end-link').addEventListener('click', function(e) {
 	e.preventDefault();
 	if (challengeCount <= 0) return;
@@ -1130,12 +962,21 @@ document.getElementById('game-end-link').addEventListener('click', function(e) {
 
 	// 关闭结束弹窗
 	Game.elements.end.classList.remove('show');
-	document.getElementById('game-end-error').style.display = 'none';
-	document.getElementById('game-end-settling').style.display = 'none';
 
-	// 更新顶栏次数
+	// 重新显示菜单覆盖层并更新次数
+	Game.elements.menuOverlay.style.display = '';
 	initChallengeUI();
 
-	// 跳过菜单，直接开始游戏
-	Game.startGame();
+	// 重新加载菜单
+	Composite.add(engine.world, menuStatics);
+	Game.elements.ui.style.display = 'none';
+
+	// 重新绑定菜单点击
+	const menuMouseDown = function () {
+		if (challengeCount <= 0) return;
+		if (mouseConstraint.body === null || mouseConstraint.body?.label !== 'btn-start') return;
+		Events.off(mouseConstraint, 'mousedown', menuMouseDown);
+		Game.startGame();
+	};
+	Events.on(mouseConstraint, 'mousedown', menuMouseDown);
 });

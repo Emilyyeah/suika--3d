@@ -437,27 +437,6 @@
       line-height: 1.15;
       text-shadow: 2px 2px 0 rgba(255,83,0,0.15);
     }
-    #game-end-total-wrap {
-      margin: 10px 0 0;
-      padding-top: 10px;
-      border-top: 1px dashed rgba(200,112,10,0.3);
-    }
-    #game-end-total-label {
-      font-size: 12px;
-      font-weight: 700;
-      color: #b85c00;
-    }
-    #game-end-total-value {
-      font-size: 32px;
-      font-weight: 900;
-      color: #c8700a;
-      line-height: 1.2;
-    }
-    #game-end-settling {
-      font-size: 13px;
-      color: #b85c00;
-      margin-top: 6px;
-    }
 
     /* ── 退出确认弹窗 ── */
     #quit-modal {
@@ -646,20 +625,16 @@
     </div>
 
   </div>
+  </div>
 
   <!-- 游戏结束弹窗 -->
   <div id="game-end-container" class="modal-overlay">
     <div class="modal-box">
       <div class="modal-title">游戏结束！</div>
       <div id="game-end-score-wrap">
-        <div id="game-end-score-label">本轮获得积分</div>
+        <div id="game-end-score-label">本局得分</div>
         <div id="game-end-score-value">0</div>
       </div>
-      <div id="game-end-total-wrap">
-        <div id="game-end-total-label">当前累计积分</div>
-        <div id="game-end-total-value">0</div>
-      </div>
-      <div id="game-end-settling" style="display:none;">结算中...</div>
       <div id="game-end-has-chance" class="modal-btns" style="display:none;">
         <a id="game-end-back-link" href="" class="modal-btn modal-btn-secondary">返回</a>
         <a id="game-end-link" href="" class="modal-btn modal-btn-primary">再来一局</a>
@@ -668,12 +643,6 @@
         <div class="modal-desc" style="margin-top:8px;margin-bottom:0;">挑战次数已用完</div>
         <div class="modal-btns">
           <a id="game-end-back-link2" href="" class="modal-btn modal-btn-primary">返回</a>
-        </div>
-      </div>
-      <div id="game-end-error" style="display:none;">
-        <div class="modal-btns">
-          <a id="game-end-back-link3" href="" class="modal-btn modal-btn-secondary">返回</a>
-          <a id="game-end-retry-link" href="" class="modal-btn modal-btn-primary">再来一局</a>
         </div>
       </div>
     </div>
@@ -691,8 +660,7 @@
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/blueimp-md5@2.19.0/js/md5.min.js"></script>
   <script type="text/javascript" src="./matter.js"></script>
-  <script type="text/javascript" src="./index.js?v=34"></script>
+  <script type="text/javascript" src="./index.js?v=33"></script>
 </body>
 </html>
