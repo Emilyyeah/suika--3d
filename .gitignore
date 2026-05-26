@@ -3,3 +3,7 @@ package.json
 package-lock.json
 .DS_Store
 *-raw.png
+
+# 脱敏推送
+deploy.sh
+*.__bak__

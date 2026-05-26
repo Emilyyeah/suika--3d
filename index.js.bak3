@@ -2,8 +2,8 @@
 // ── API 对接模块 ─────────────────────────────────────────────────
 // ══════════════════════════════════════════════════════════════════
 
-const API_URL = 'YOUR_API_URL';
-const SIGN_KEY = 'YOUR_SIGN_KEY';
+const API_URL = 'http://sdk-api.37.com.cn/api/gaia-trigger-proxy/v1/challenge_service/finish_challenge';
+const SIGN_KEY = 'Jp*4Y8vQOYck2*&Z';
 
 // ── 解析 URL 参数（小程序跳转时携带） ──
 function getUrlParams() {
@@ -33,7 +33,10 @@ const LaunchParams = {
 	drid:          urlParams.drid || '',
 	dsname:        urlParams.dsname || '',
 	drname:        urlParams.drname || '',
+	minigame_score:    parseInt(urlParams.minigame_score) || 0,
 	challenge_count:   'challenge_count' in urlParams ? parseInt(urlParams.challenge_count) : 3,
+	revive_item_count: parseInt(urlParams.revive_item_count) || 0,
+	double_item_count: parseInt(urlParams.double_item_count) || 0,
 };
 
 // ── 唯一业务流水号生成 ──
@@ -82,7 +85,9 @@ async function callFinishChallenge(score) {
 		biz_no:                    biz_no,
 		score:                     score,
 		timestamp:                 timestamp,
-		version:                   'v1',
+		version:                   'v3',
+		consume_revive_item_count: 0,
+		consume_double_item_count: 0,
 	};
 
 	params.sign = makeSign(params);
@@ -731,8 +736,15 @@ const Game = {
 				// 用接口返回值更新 UI
 				challengeCount = data.remain_challenge_count;
 
+				// 累计积分 = actual_score + 初始积分
+				const totalScore = data.actual_score + LaunchParams.minigame_score;
+				totalValue.textContent = totalScore;
+				totalWrap.style.display = '';
+
 				settlingEl.style.display = 'none';
-				totalWrap.style.display = 'none';
+
+				// 更新累计初始积分（多局场景下保持准确）
+				LaunchParams.minigame_score = totalScore;
 
 				// 刷新顶栏剩余次数
 				initChallengeUI();
