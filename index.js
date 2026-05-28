@@ -669,6 +669,7 @@ const Game = {
 		Game.elements.previewBall = Game.generateFruitBody(Game.width / 2, previewBallHeight, 1, { isStatic: true });
 		Composite.add(engine.world, Game.elements.previewBall);
 		Game.unlockCompendium(1);
+		Game.setNextFruitSize();
 
 		setTimeout(() => {
 			Game.stateIndex = GameStates.READY;
