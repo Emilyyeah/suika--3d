@@ -600,6 +600,19 @@
     #btn-start-html:hover { opacity: 0.9; }
     #btn-start-html.hidden { display: none; }
 
+    /* ── 菜单合图 ── */
+    #menu-bg {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 90%;
+      height: auto;
+      z-index: 105;
+      pointer-events: none;
+    }
+    #menu-bg.hidden { display: none; }
+
   </style>
 </head>
 <body>
@@ -634,6 +647,8 @@
       <img id="menu-title" src="./assets/img/标题.png" />
       <!-- 开始按钮（HTML层，画布外） -->
       <img id="btn-start-html" src="./assets/img/开始游戏按钮.png" />
+      <!-- 菜单合图（HTML层，画布外） -->
+      <img id="menu-bg" src="./assets/img/bg_menu.png" />
       <div id="game-canvas">
         <div id="game-ui">
 

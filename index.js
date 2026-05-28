@@ -628,7 +628,6 @@ const Game = {
 		Render.run(render);
 		Runner.run(runner, engine);
 
-		Composite.add(engine.world, menuStatics);
 
 		Game.elements.ui.style.display = 'none';
 		Game.fruitsMerged = Array.apply(null, Array(Game.fruitSizes.length)).map(() => 0);
@@ -655,8 +654,8 @@ const Game = {
 		Game.elements.menuOverlay.style.display = 'none';
 		document.getElementById('menu-title').style.display = 'none';
 		document.getElementById('btn-start-html').classList.add('hidden');
+		document.getElementById('menu-bg').classList.add('hidden');
 
-		Composite.remove(engine.world, menuStatics);
 		Composite.add(engine.world, gameStatics);
 
 		Game.score = 0;
@@ -817,54 +816,6 @@ const render = Render.create({
 	}
 });
 
-const menuStatics = [
-	Bodies.rectangle(Game.width / 2, 520, 480, 525, {
-		isStatic: true,
-		collisionFilter: { mask: 0x0040 },
-		render: { sprite: { texture: './assets/img/bg-menu640×700.png', xScale: 0.75, yScale: 0.75 } },
-	}),
-
-	Bodies.circle(210, 370, 58, {
-		isStatic: true,
-		render: { sprite: { texture: './assets/img/circle5.png', xScale: 58/422, yScale: 58/422 } },
-	}),
-	Bodies.circle(440, 365, 48, {
-		isStatic: true,
-		render: { sprite: { texture: './assets/img/circle3.png', xScale: 48/422, yScale: 48/422 } },
-	}),
-	Bodies.circle(165, 490, 38, {
-		isStatic: true,
-		render: { sprite: { texture: './assets/img/circle4.png', xScale: 38/422, yScale: 38/422 } },
-	}),
-	Bodies.circle(320, 510, 90, {
-		isStatic: true,
-		render: { sprite: { texture: './assets/img/circle10.png', xScale: 90/422, yScale: 90/422 } },
-	}),
-	Bodies.circle(480, 480, 42, {
-		isStatic: true,
-		render: { sprite: { texture: './assets/img/circle6.png', xScale: 42/422, yScale: 42/422 } },
-	}),
-	Bodies.circle(150, 600, 42, {
-		isStatic: true,
-		render: { sprite: { texture: './assets/img/circle7.png', xScale: 42/422, yScale: 42/422 } },
-	}),
-	Bodies.circle(225, 660, 60, {
-		isStatic: true,
-		render: { sprite: { texture: './assets/img/circle1.png', xScale: 60/422, yScale: 60/422 } },
-	}),
-	Bodies.circle(370, 645, 35, {
-		isStatic: true,
-		render: { sprite: { texture: './assets/img/circle8.png', xScale: 35/422, yScale: 35/422 } },
-	}),
-	Bodies.circle(460, 620, 44, {
-		isStatic: true,
-		render: { sprite: { texture: './assets/img/circle2.png', xScale: 44/422, yScale: 44/422 } },
-	}),
-	Bodies.circle(490, 670, 33, {
-		isStatic: true,
-		render: { sprite: { texture: './assets/img/circle9.png', xScale: 33/422, yScale: 33/422 } },
-	}),
-];
 
 const wallProps = {
 	isStatic: true,
