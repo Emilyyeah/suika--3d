@@ -128,6 +128,7 @@ const {
 } = Matter;
 
 const wallPad = 64;
+const wallInset = 18; // sprite比碰撞体大21%，墙内收防止视觉溢出
 const loseHeight = 84;
 const previewBallHeight = 32;
 
@@ -635,18 +636,13 @@ const Game = {
 		// 初始化挑战次数 UI
 		initChallengeUI();
 
-		const menuMouseDown = function () {
-			// 次数为0时，禁止开始
+		// 开始按钮交互（DOM层）
+		const btnStartHtml = document.getElementById('btn-start-html');
+		btnStartHtml.addEventListener('click', function onStartClick() {
 			if (challengeCount <= 0) return;
-			if (mouseConstraint.body === null || mouseConstraint.body?.label !== 'btn-start') {
-				return;
-			}
-
-			Events.off(mouseConstraint, 'mousedown', menuMouseDown);
+			btnStartHtml.removeEventListener('click', onStartClick);
 			Game.startGame();
-		}
-
-		Events.on(mouseConstraint, 'mousedown', menuMouseDown);
+		});
 	},
 
 	startGame: function () {
@@ -655,8 +651,10 @@ const Game = {
 		// 挑战次数由结算接口返回值更新，此处不再客户端扣减
 		// challengeCount 会在 loseGame → callFinishChallenge 回调中更新
 
-		// 隐藏菜单覆盖层
+		// 隐藏菜单覆盖层和 HTML 层标题/按钮
 		Game.elements.menuOverlay.style.display = 'none';
+		document.getElementById('menu-title').style.display = 'none';
+		document.getElementById('btn-start-html').classList.add('hidden');
 
 		Composite.remove(engine.world, menuStatics);
 		Composite.add(engine.world, gameStatics);
@@ -763,7 +761,7 @@ const Game = {
 		const circle = Bodies.circle(x, y, size.radius, {
 			...friction,
 			...extraConfig,
-			render: { sprite: { texture: size.img, xScale: size.radius / 512, yScale: size.radius / 512 } },
+			render: { sprite: { texture: size.img, xScale: size.radius / 422, yScale: size.radius / 422 } },
 		});
 		circle.sizeIndex = sizeIndex;
 		circle.popped = false;
@@ -779,7 +777,7 @@ const Game = {
 
 		// 投放位置也做边界裁剪，防止球落在墙外
 		const r = Game.fruitSizes[Game.currentFruitSize].radius;
-		const clampedX = Math.max(r, Math.min(Game.width - r, x));
+		const clampedX = Math.max(wallInset + r, Math.min(Game.width - wallInset - r, x));
 
 		Game.stateIndex = GameStates.DROP;
 		const latestFruit = Game.generateFruitBody(clampedX, previewBallHeight, Game.currentFruitSize);
@@ -814,53 +812,71 @@ const render = Render.create({
 		width: Game.width,
 		height: Game.height,
 		wireframes: false,
-		background: '#ffdcae'
+		background: 'transparent'
 	}
 });
 
 const menuStatics = [
-	Bodies.rectangle(Game.width / 2, Game.height * 0.4, 512, 512, {
+	Bodies.rectangle(Game.width / 2, 520, 480, 525, {
 		isStatic: true,
-		render: { sprite: { texture: './assets/img/bg-menu.png' } },
+		collisionFilter: { mask: 0x0040 },
+		render: { sprite: { texture: './assets/img/bg-menu640×700.png', xScale: 0.75, yScale: 0.75 } },
 	}),
 
-	// Add each fruit in a circle
-	...Array.apply(null, Array(Game.fruitSizes.length)).map((_, index) => {
-		const x = (Game.width / 2) + 192 * Math.cos((Math.PI * 2 * index)/12);
-		const y = (Game.height * 0.4) + 192 * Math.sin((Math.PI * 2 * index)/12);
-		const r = 64;
-
-		return Bodies.circle(x, y, r, {
-			isStatic: true,
-			render: {
-				sprite: {
-					texture: `./assets/img/circle${index}.png`,
-					xScale: r / 1024,
-					yScale: r / 1024,
-				},
-			},
-		});
-	}),
-
-	Bodies.rectangle(Game.width / 2, Game.height * 0.75, 512, 96, {
+	Bodies.circle(210, 370, 58, {
 		isStatic: true,
-		label: 'btn-start',
-		render: { sprite: { texture: './assets/img/btn-start.png' } },
+		render: { sprite: { texture: './assets/img/circle5.png', xScale: 58/422, yScale: 58/422 } },
+	}),
+	Bodies.circle(440, 365, 48, {
+		isStatic: true,
+		render: { sprite: { texture: './assets/img/circle3.png', xScale: 48/422, yScale: 48/422 } },
+	}),
+	Bodies.circle(165, 490, 38, {
+		isStatic: true,
+		render: { sprite: { texture: './assets/img/circle4.png', xScale: 38/422, yScale: 38/422 } },
+	}),
+	Bodies.circle(320, 510, 90, {
+		isStatic: true,
+		render: { sprite: { texture: './assets/img/circle10.png', xScale: 90/422, yScale: 90/422 } },
+	}),
+	Bodies.circle(480, 480, 42, {
+		isStatic: true,
+		render: { sprite: { texture: './assets/img/circle6.png', xScale: 42/422, yScale: 42/422 } },
+	}),
+	Bodies.circle(150, 600, 42, {
+		isStatic: true,
+		render: { sprite: { texture: './assets/img/circle7.png', xScale: 42/422, yScale: 42/422 } },
+	}),
+	Bodies.circle(225, 660, 60, {
+		isStatic: true,
+		render: { sprite: { texture: './assets/img/circle1.png', xScale: 60/422, yScale: 60/422 } },
+	}),
+	Bodies.circle(370, 645, 35, {
+		isStatic: true,
+		render: { sprite: { texture: './assets/img/circle8.png', xScale: 35/422, yScale: 35/422 } },
+	}),
+	Bodies.circle(460, 620, 44, {
+		isStatic: true,
+		render: { sprite: { texture: './assets/img/circle2.png', xScale: 44/422, yScale: 44/422 } },
+	}),
+	Bodies.circle(490, 670, 33, {
+		isStatic: true,
+		render: { sprite: { texture: './assets/img/circle9.png', xScale: 33/422, yScale: 33/422 } },
 	}),
 ];
 
 const wallProps = {
 	isStatic: true,
-	render: { fillStyle: '#FFEEDB' },
+	render: { fillStyle: 'transparent', strokeStyle: 'transparent', lineWidth: 0 },
 	...friction,
 };
 
 const gameStatics = [
 	// Left
-	Bodies.rectangle(-(wallPad / 2), Game.height / 2, wallPad, Game.height, wallProps),
+	Bodies.rectangle(wallInset - (wallPad / 2), Game.height / 2, wallPad, Game.height, wallProps),
 
 	// Right
-	Bodies.rectangle(Game.width + (wallPad / 2), Game.height / 2, wallPad, Game.height, wallProps),
+	Bodies.rectangle(Game.width - wallInset + (wallPad / 2), Game.height / 2, wallPad, Game.height, wallProps),
 
 	// Bottom
 	Bodies.rectangle(Game.width / 2, Game.height + (wallPad / 2), Game.width, wallPad, wallProps),
@@ -879,6 +895,12 @@ const mouseConstraint = MouseConstraint.create(engine, {
 });
 render.mouse = mouse;
 
+// ── 透明背景：每帧手动清屏，避免帧叠加 ──
+Events.on(render, 'beforeRender', function() {
+	const ctx = render.context;
+	ctx.clearRect(0, 0, render.options.width, render.options.height);
+});
+
 Game.initGame();
 
 // ── 全局事件注册（只注册一次，用状态守卫控制行为）──────────────
@@ -891,7 +913,7 @@ Events.on(mouseConstraint, 'mousemove', function (e) {
 	if (Game.elements.previewBall === null) return;
 
 	const r = Game.fruitSizes[Game.currentFruitSize].radius;
-	const clampedX = Math.max(r, Math.min(Game.width - r, e.mouse.position.x));
+	const clampedX = Math.max(wallInset + r, Math.min(Game.width - wallInset - r, e.mouse.position.x));
 	Body.setPosition(Game.elements.previewBall, {
 		x: clampedX,
 		y: previewBallHeight,
@@ -1069,7 +1091,7 @@ render.canvas.addEventListener('touchmove', (e) => {
 
 	const x = touchToCanvasX(e.touches[0]);
 	const r = Game.fruitSizes[Game.currentFruitSize].radius;
-	const clampedX = Math.max(r, Math.min(Game.width - r, x));
+	const clampedX = Math.max(wallInset + r, Math.min(Game.width - wallInset - r, x));
 	Body.setPosition(Game.elements.previewBall, { x: clampedX, y: previewBallHeight });
 }, { passive: false });
 
