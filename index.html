@@ -306,7 +306,7 @@
       left: 0;
       right: 0;
       height: 10px;
-      background: url(./assets/img/死亡线.png) center/contain repeat-x;
+      background: url(./assets/img/死亡线.png) center/100% 100% no-repeat;
       border: none;
       z-index: 10;
     }
@@ -328,13 +328,13 @@
       position: relative;
       flex: 1;
       display: flex;
-      align-items: flex-start;
+      align-items: center;
       justify-content: center;
-      overflow: visible;
+      overflow: hidden;
       min-height: 0;
       border: none;
       box-shadow: none;
-      background: transparent;
+      background: transparent; /* 游戏中由JS切换 */
       padding-top: 0;
     }
 

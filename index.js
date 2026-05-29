@@ -655,6 +655,7 @@ const Game = {
 		document.getElementById('menu-title').style.display = 'none';
 		document.getElementById('btn-start-html').classList.add('hidden');
 		document.getElementById('menu-bg').classList.add('hidden');
+		render.canvas.style.background = "url(./assets/img/game-bg.jpg) center/cover no-repeat";
 
 		Composite.add(engine.world, gameStatics);
 
