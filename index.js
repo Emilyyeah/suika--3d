@@ -129,8 +129,8 @@ const {
 
 const wallPad = 64;
 const wallInset = 18; // sprite比碰撞体大21%，墙内收防止视觉溢出
-const loseHeight = 84;
-const previewBallHeight = 32;
+const loseHeight = 174;
+const previewBallHeight = 100;
 
 // 越线多少毫秒后才判负（防止弹起瞬间误判）
 const LOSE_GRACE_MS = 500;
@@ -552,7 +552,7 @@ const GameStates = {
 
 const Game = {
 	width: 640,
-	height: 700,
+	height: 800,
 	elements: {
 		canvas: document.getElementById('game-canvas'),
 		ui: document.getElementById('game-ui'),
@@ -655,7 +655,7 @@ const Game = {
 		document.getElementById('menu-title').style.display = 'none';
 		document.getElementById('btn-start-html').classList.add('hidden');
 		document.getElementById('menu-bg').classList.add('hidden');
-		render.canvas.style.background = "url(./assets/img/game-bg.jpg) center/cover no-repeat";
+		render.canvas.style.background = "url(./assets/img/游戏逻辑区.png) bottom/100% auto no-repeat";
 
 		Composite.add(engine.world, gameStatics);
 
@@ -832,7 +832,7 @@ const gameStatics = [
 	Bodies.rectangle(Game.width - wallInset + (wallPad / 2), Game.height / 2, wallPad, Game.height, wallProps),
 
 	// Bottom
-	Bodies.rectangle(Game.width / 2, Game.height + (wallPad / 2), Game.width, wallPad, wallProps),
+	Bodies.rectangle(Game.width / 2, 790 + (wallPad / 2), Game.width, wallPad, wallProps),
 ];
 
 // add mouse control
