@@ -163,6 +163,7 @@
       position: absolute;
       top: 0; left: 0;
       width: 100%; height: 100%;
+      overflow: hidden;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -185,8 +186,8 @@
       position: absolute;
       inset: 0;
       background: radial-gradient(ellipse at center,
-        rgba(100,180,255,0.45) 0%,
-        rgba(60,100,200,0.2) 50%,
+        rgba(200,170,80,0.45) 0%,
+        rgba(90,100,180,0.25) 50%,
         transparent 75%);
       animation: bmo-pulse 0.4s ease infinite alternate;
     }
@@ -196,30 +197,30 @@
     }
     #big-merge-rays {
       position: absolute;
-      width: 500px;
-      height: 500px;
+      width: 100%;
+      aspect-ratio: 1;
       top: 50%; left: 50%;
       transform: translate(-50%, -50%);
       background: conic-gradient(
         from 0deg,
-        transparent 0deg,   rgba(100,180,255,0.35) 10deg,
-        transparent 20deg,  rgba(200,180,100,0.35) 30deg,
-        transparent 40deg,  rgba(100,180,255,0.35) 50deg,
-        transparent 60deg,  rgba(200,180,100,0.35) 70deg,
-        transparent 80deg,  rgba(100,180,255,0.35) 90deg,
-        transparent 100deg, rgba(200,180,100,0.35) 110deg,
-        transparent 120deg, rgba(100,180,255,0.35) 130deg,
-        transparent 140deg, rgba(200,180,100,0.35) 150deg,
-        transparent 160deg, rgba(100,180,255,0.35) 170deg,
-        transparent 180deg, rgba(200,180,100,0.35) 190deg,
-        transparent 200deg, rgba(100,180,255,0.35) 210deg,
-        transparent 220deg, rgba(200,180,100,0.35) 230deg,
-        transparent 240deg, rgba(100,180,255,0.35) 250deg,
-        transparent 260deg, rgba(200,180,100,0.35) 270deg,
-        transparent 280deg, rgba(100,180,255,0.35) 290deg,
-        transparent 300deg, rgba(200,180,100,0.35) 310deg,
-        transparent 320deg, rgba(100,180,255,0.35) 330deg,
-        transparent 340deg, rgba(200,180,100,0.35) 350deg,
+        transparent 0deg,   rgba(90,100,180,0.35) 10deg,
+        transparent 20deg,  rgba(200,170,80,0.35) 30deg,
+        transparent 40deg,  rgba(90,100,180,0.35) 50deg,
+        transparent 60deg,  rgba(200,170,80,0.35) 70deg,
+        transparent 80deg,  rgba(90,100,180,0.35) 90deg,
+        transparent 100deg, rgba(200,170,80,0.35) 110deg,
+        transparent 120deg, rgba(90,100,180,0.35) 130deg,
+        transparent 140deg, rgba(200,170,80,0.35) 150deg,
+        transparent 160deg, rgba(90,100,180,0.35) 170deg,
+        transparent 180deg, rgba(200,170,80,0.35) 190deg,
+        transparent 200deg, rgba(90,100,180,0.35) 210deg,
+        transparent 220deg, rgba(200,170,80,0.35) 230deg,
+        transparent 240deg, rgba(90,100,180,0.35) 250deg,
+        transparent 260deg, rgba(200,170,80,0.35) 270deg,
+        transparent 280deg, rgba(90,100,180,0.35) 290deg,
+        transparent 300deg, rgba(200,170,80,0.35) 310deg,
+        transparent 320deg, rgba(90,100,180,0.35) 330deg,
+        transparent 340deg, rgba(200,170,80,0.35) 350deg,
         transparent 360deg
       );
       border-radius: 50%;
@@ -233,8 +234,8 @@
     #big-merge-fruit {
       width: 180px; height: 180px;
       object-fit: contain;
-      filter: drop-shadow(0 0 24px rgba(100,180,255,0.9))
-              drop-shadow(0 0 48px rgba(60,100,200,0.6));
+      filter: drop-shadow(0 0 24px rgba(200,170,80,0.9))
+              drop-shadow(0 0 48px rgba(90,100,180,0.6));
       position: relative; z-index: 1;
       opacity: 0;
     }
@@ -252,7 +253,7 @@
       font-size: 64px;
       font-weight: 900;
       letter-spacing: 3px;
-      position: relative; z-index: 1;
+      position: relative; z-index: 1; width: 100%; text-align: center;
       margin-top: 12px;
       -webkit-text-stroke: 4px rgba(0,0,0,0.25);
       opacity: 0;
@@ -280,9 +281,9 @@
       font-weight: 900;
       color: #fff;
       text-shadow:
-        0 0 12px #4488ff,
-        0 0 24px #2255cc,
-        2px 2px 0 #223388;
+        0 0 12px rgba(200,170,80,0.8),
+        0 0 24px rgba(90,100,180,0.6),
+        2px 2px 0 rgba(50,50,100,0.5);
       letter-spacing: 2px;
       opacity: 0;
       pointer-events: none;

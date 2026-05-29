@@ -184,7 +184,7 @@ requestAnimationFrame(tickParticles);
 
 // 爆出彩色粒子（合并特效）
 const PARTICLE_COLORS = [
-  '#ff5500','#ffaa00','#ffdd00','#66dd00','#00ccff','#cc44ff','#ff44aa','#ffffff'
+  '#C8A050','#D4B060','#B08830','#6B80C0','#5B6EB0','#8090D0','#ffffff','#ffe8a0'
 ];
 function spawnParticles(x, y, r, count = 18) {
   for (let i = 0; i < count; i++) {
@@ -332,9 +332,9 @@ function spawnBigMergeText(points, label) {
 
 // ── 大合成特效（合成出 circle8/9/10 时触发）──────────────────
 const BIG_MERGE_LEVELS = {
-  8:  { label: 'GOOD！',    color: '#ff9900', shadow: '#ff5500', bonus: 50  },
-  9:  { label: 'GREAT！',   color: '#ff44cc', shadow: '#aa00aa', bonus: 100 },
-  10: { label: 'AMAZING！', color: '#00ddff', shadow: '#0044ff', bonus: 300 },
+  8:  { label: 'GOOD！',    color: '#D4B060', shadow: '#B08830', bonus: 50  },
+  9:  { label: 'GREAT！',   color: '#8090D0', shadow: '#4A5A9A', bonus: 100 },
+  10: { label: 'AMAZING！', color: '#ffe080', shadow: '#C8A050', bonus: 300 },
 };
 let bigMergeTimer = null;
 
