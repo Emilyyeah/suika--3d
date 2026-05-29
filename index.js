@@ -332,9 +332,9 @@ function spawnBigMergeText(points, label) {
 
 // ── 大合成特效（合成出 circle8/9/10 时触发）──────────────────
 const BIG_MERGE_LEVELS = {
-  8:  { label: 'GOOD！',    color: '#D4B060', shadow: '#B08830', bonus: 50  },
-  9:  { label: 'GREAT！',   color: '#8090D0', shadow: '#4A5A9A', bonus: 100 },
-  10: { label: 'AMAZING！', color: '#ffe080', shadow: '#C8A050', bonus: 300 },
+  8:  { label: 'GOOD',    color: '#D4B060', shadow: '#B08830', bonus: 50  },
+  9:  { label: 'GREAT',   color: '#8090D0', shadow: '#4A5A9A', bonus: 100 },
+  10: { label: 'AMAZING', color: '#ffe080', shadow: '#C8A050', bonus: 300 },
 };
 let bigMergeTimer = null;
 
